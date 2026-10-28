@@ -1380,6 +1380,7 @@ echo -e "${COLOR1}│$NC ${WH} ❈ ${RED}𝐀𝐕𝐈𝐒𝐎${NC}: ${purple}ᴍ
 echo -e "${COLOR1}╰═══════════════════════════════════════════════════════════╯${NC}"
 echo -e ""
 echo -e " ${COLOR1}[14]${NC} ${WH}HCR SERVER${NC}"
+echo -e " ${COLOR1}[15]${NC} ${WH}BHTTP SERVER${NC}"
 echo -ne " ${WH}Selecciona Opc MENU ${COLOR1}: ${WH}"; read opt
 case $opt in
 01 | 1) clear ; m-sshovpn ;;
@@ -1400,6 +1401,7 @@ case $opt in
 #15 | 15) clear ; key ;;
 13 | 13) clear ; restartservice ;;
 14 | 14) clear ; m-hcr ;;
+15 | 15) clear ; m-bhttp ;;
 20 | 20) clear ; setupslow ;;
 #21 | 21) clear ; $ressee2 ;;
 #20 | 22) clear ; $ressee3 ;;

@@ -330,7 +330,7 @@ unzip -o -j -P SCr1PtByJS7ruxBx1Sj /root/SBG/menu/menuFREE.zip "menu/*" -d /usr/
 chmod -R 755 /usr/local/sbin
 rm -rf /root/SBG/menu/*.zip
 # Reemplazar con versiones parcheadas (sin key/ban) los que lo tenian
-for sub in menu m-sshovpn m-vmess m-vless m-trojan m-system m-bot m-ss m-token m-hcr newdom restore; do
+for sub in menu m-sshovpn m-vmess m-vless m-trojan m-system m-bot m-ss m-token m-hcr m-bhttp newdom restore; do
     if [ "$sub" = "menu" ]; then
         wget -q "$GH_MAIN/menu_nokey.sh" -O /usr/local/sbin/menu 2>/dev/null
     else
@@ -341,6 +341,11 @@ mkdir -p /usr/local/lib/hcr-server
 wget -q "$GH_MAIN/scripts/hcr/install.sh" -O /usr/local/lib/hcr-server/install.sh 2>/dev/null
 wget -q "$GH_MAIN/scripts/hcr/hcr-server" -O /usr/local/lib/hcr-server/hcr-server 2>/dev/null
 chmod 755 /usr/local/lib/hcr-server/install.sh /usr/local/lib/hcr-server/hcr-server 2>/dev/null || true
+mkdir -p /usr/local/lib/bhttp-bundle
+wget -q "$GH_MAIN/scripts/bhttp/bhttp-install.sh" -O /usr/local/lib/bhttp-bundle/bhttp-install.sh 2>/dev/null
+wget -q "$GH_MAIN/scripts/bhttp/bhttp-probe.sh" -O /usr/local/lib/bhttp-bundle/bhttp-probe.sh 2>/dev/null
+wget -q "$GH_MAIN/scripts/bhttp/bhttp-activar.sh" -O /usr/local/lib/bhttp-bundle/bhttp-activar.sh 2>/dev/null
+chmod 755 /usr/local/lib/bhttp-bundle/*.sh 2>/dev/null || true
 chmod -R 755 /usr/local/sbin
 clear
 }
