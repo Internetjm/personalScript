@@ -1198,7 +1198,7 @@ Domain DNS       :  1.1.1.1 / 8.8.8.8
 Pub Key          :   $slkey
 ━━━━━━━━━━━━━━━━━━
 Save Link Account: https://$domain:8888/sshx-$Login.txt
-LINK CHECKUSER SBG: https://$domain:8888/CheckUser
+LINK CHECKUSER jmscript: https://$domain:8888/CheckUser
 ━━━━━━━━━━━━━━━━━━
                   $author
 ━━━━━━━━━━━━━━━━━━
@@ -1226,7 +1226,7 @@ Domain DNS       :  1.1.1.1 / 8.8.8.8
 Pub Key          :   $slkey
 ━━━━━━━━━━━━━━━━━━
 Save Link Account: https://$domain:8888/sshx-$Login.txt
-LINK CHECKUSER SBG: https://$domain:8888/CheckUser
+LINK CHECKUSER jmscript: https://$domain:8888/CheckUser
 ━━━━━━━━━━━━━━━━━━
                   $author
 ━━━━━━━━━━━━━━━━━━
@@ -1276,7 +1276,7 @@ echo -e "${COLOR1} $NC  ${WH}PUB KEY    ${COLOR1}: ${WH}$slkey" | tee -a /etc/xr
 echo -e "${COLOR1} ━━━━━━━━━━━━━━━ ${NC}" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
 echo -e "${COLOR1} ${NC}  ${WH}Save Link Acount    : " | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
 echo -e "${COLOR1} ${NC}  ${WH}https://$domain:8888/sshx-$Login.txt${NC}${COLOR1} $NC" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} ${NC}  ${WH}Link CHECK USER SBG : " | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
+echo -e "${COLOR1} ${NC}  ${WH}Link CHECK USER jmscript : " | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
 echo -e "${COLOR1} ${NC}  ${WH}https://$domain:8888/CheckUser${NC}${COLOR1} $NC" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
 echo -e "${COLOR1} ━━━━━━━━━━━━━━━ ${NC}" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
 echo -e "${COLOR1} ${NC}    ${WH}• $author •${NC}                 ${COLOR1} $NC" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
@@ -1969,7 +1969,7 @@ read -p " INGRESA ID A ELIMINAR (EJEMPLO: 232323): " ids
 #kill -s SIGINT $ids
 #kill -HUP $ids
 kill -9 $ids >/dev/null 2>&1
-echo -e "${Yellow} SESION CERRADA CORRECTAMENTE By JERRY"
+echo -e "${Yellow} SESION CERRADA CORRECTAMENTE JM SCRIPT"
 echo -e "${Yellow} REGRESANDO AL MENU"
 sleep 1
 systemctl daemon-reload
@@ -1987,7 +1987,7 @@ read -p " INGRESA IDs A ELIMINAR (EJEMPLO: 232323): " ids
 #kill -s SIGINT $ids
 #kill -HUP $ids 1698638,
 kill -9 $ids >/dev/null 2>&1
-echo -e "${Yellow} SESIONES CERRADAS CORRECTAMENTE By JERRY"
+echo -e "${Yellow} SESIONES CERRADAS CORRECTAMENTE JM SCRIPT"
 echo -e "${Yellow} REGRESANDO AL MENU"
 sleep 1
 systemctl daemon-reload
@@ -2007,7 +2007,7 @@ sed -i '/auth,authpriv\.\*/c\*.*;auth,authpriv.*             /var/log/auth.log' 
 systemctl daemon-reload
 systemctl restart rsyslog
 systemctl restart haproxy
-echo -e "${yell}  FIX APLICADO CORRECTAMENTE By JERRY"
+echo -e "${yell}  FIX APLICADO CORRECTAMENTE JM SCRIPT"
 echo -e "${yell}  ESPERA UNOS SEGUNDOS PARA VER LOS USUARIOS"
 sleep 1
 m-token

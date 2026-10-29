@@ -8,7 +8,7 @@ WH='\033[1;37m'
 cd
 rm -f /root/installsl.sh
 clear
-slowsbg() {
+slowjm() {
 slc=$(systemctl status server | grep Active | awk '{print $3}' | cut -d "(" -f2 | cut -d ")" -f1)
 if [[ $slc == "running" ]]; then
    slc2=" ${COLOR1}ON ${NC}"
@@ -122,4 +122,4 @@ menu
 fi
 menu
 }
-slowsbg
+slowjm

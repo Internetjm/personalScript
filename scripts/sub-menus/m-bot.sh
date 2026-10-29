@@ -130,7 +130,7 @@ END
 
 cat > /etc/systemd/system/kyt.service << END
 [Unit]
-Description=Simple kyt By - @Jerry_SBG
+Description=Simple kyt - JM SCRIPT
 After=syslog.target network-online.target
 
 [Service]
@@ -206,7 +206,7 @@ clear
 
 cat > /etc/systemd/system/kyt.service << END
 [Unit]
-Description=Simple kyt By - @Jerry_SBG
+Description=Simple kyt - JM SCRIPT
 After=syslog.target network-online.target
 
 [Service]

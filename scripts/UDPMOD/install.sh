@@ -56,7 +56,7 @@ cat > ${dir}/UDPMOD/config.json << END
   "disable_mtu_discovery": false,
   "auth": {
     "mode": "passwords",
-    "config": ["Usbg:Psbg"]
+    "config": ["Ujm:Pjm"]
   }
 }
 END
@@ -104,8 +104,8 @@ echo -e "${COLOR1}╭═══════════════════�
 echo -e "   \e[1;32mOBFS: ${OBFS}" > ${dir}/UDPMOD/data
 echo -e "   \e[1;32mPuerto: 36712" >> ${dir}/UDPMOD/data
 echo -e "   \e[1;32mRango de Puertos: 20000:39999"
-echo -e "   \e[1;32mUsuario :    Usbg"
-echo -e "   \e[1;32mContraseña : Psbg"
+echo -e "   \e[1;32mUsuario :    Ujm"
+echo -e "   \e[1;32mContraseña : Pjm"
 echo -e "${COLOR1}╰══════════════════════════════════════════╯${NC}"
 rm -f /root/UDPMOD/install.sh
 rm -f /root/UDPMOD/README.md

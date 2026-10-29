@@ -127,7 +127,7 @@ clear
 echo -e  "${COLOR1}╭══════════════════════════════════════════╮${NC}"
 echo -e  "${COLOR1}│             ${WH}GRACIAS POR                  ${COLOR1}│${NC}"
 echo -e  "${COLOR1}│        ${WH}MI AUTOSCRIPT PREMIUM             ${COLOR1}│${NC}"
-echo -e  "${COLOR1}│              ${WH}JERRY SBG                   ${COLOR1}│${NC}"
+echo -e  "${COLOR1}│              ${WH}JM SCRIPT                   ${COLOR1}│${NC}"
 echo -e  "${COLOR1}╰══════════════════════════════════════════╯${NC}"
 echo " "
 until [[ $dnss =~ ^[a-zA-Z0-9_.-]+$ ]]; do
@@ -153,7 +153,7 @@ echo -e "${COLOR1}│  [ 2 ]  \033[1;37mDomain xxx.berurat.cloud       ${NC}"
 echo -e "${COLOR1}│  [ 3 ]  \033[1;37mDomain xxx.xnxxms.cloud       ${NC}"
 echo -e "${COLOR1}│  [ 4 ]  \033[1;37mDomain xxx.vvpnstore.my.id       ${NC}"
 echo -e "${COLOR1}│  [ 5 ]  \033[1;37mDomain xxx.yogzvpn.cloud       ${NC}"
-echo -e "${COLOR1}│  [ 6 ]  \033[1;37mDomain xxx.jerrysbg.com      ${NC}"
+echo -e "${COLOR1}│  [ 6 ]  \033[1;37mDomain xxx.jm-script.example      ${NC}"
 echo -e "${COLOR1}╰══════════════════════════════════════════╯${NC}"
 until [[ $domain2 =~ ^[1-6]+$ ]]; do
 read -p "   Please select numbers : " domain2
@@ -253,7 +253,7 @@ fi
 if [[ $domain2 == "6" ]]; then
 clear
 echo -e  "${COLOR1}╭══════════════════════════════════════════╮${NC}"
-echo -e  "${COLOR1}│  \033[1;37mEjemplo de Subdominio xxx.jerrysbg.com        ${COLOR1}│${NC}"
+echo -e  "${COLOR1}│  \033[1;37mEjemplo de Subdominio xxx.jm-script.example        ${COLOR1}│${NC}"
 echo -e  "${COLOR1}│    \033[1;37mxxx Es Tu Subdominio               ${COLOR1}│${NC}"
 echo -e  "${COLOR1}╰══════════════════════════════════════════╯${NC}"
 echo " "

@@ -69,7 +69,7 @@ mkdir -p /etc/trojan
 elif [ ! -e /etc/trojan/listlock ]; then
 echo "" > /etc/trojan/listlock
 elif [ ! -e /etc/xray/patch ]; then
-echo "ByJerry" > /etc/xray/patch
+echo "JM SCRIPT" > /etc/xray/patch
 fi
 if ! find /var/www/html/ -name "CheckUser" -print -quit; then
 clear
@@ -370,7 +370,7 @@ rules
 }
 function setupudp2(){
 clear
-figlet '  UDPs By JERRY-SBG' | lolcat
+figlet '  UDPs By JM SCRIPT' | lolcat
 echo -e "${COLOR1}╭══════════════════════════════════════════╮${NC}"
 check_service() {
     local service_name=$1
@@ -441,7 +441,7 @@ sleep 1
 setupudp2
 fi
 if [[ $udp == "1" ]]; then
-#wget https://raw.githubusercontent.com/JerrySBG/SBG/main/udp/install_udp.sh && chmod +x install_udp.sh && bash install_udp.sh
+# Legacy upstream installer reference removed.
 #rm -rf install_udp.sh
 iptables -t nat -D PREROUTING 1
 iptables -t nat -D PREROUTING 1
@@ -573,7 +573,7 @@ menu
 
 function setupmod(){
 clear
-figlet 'HYSTERIA By JERRY-SBG' | lolcat
+figlet 'HYSTERIA By JM SCRIPT' | lolcat
 echo -e "${COLOR1}╭══════════════════════════════════════════╮${NC}"
 echo -e "${COLOR1}│             ${WH}MENU UDP HYSTERIA           ${COLOR1} │${NC}"
 echo -e "${COLOR1}╰══════════════════════════════════════════╯${NC}"
@@ -702,7 +702,7 @@ if [[ $mod == "3" ]]; then
 clear
 echo -e "${COLOR1}╭══════════════════════════════════════════╮${NC}"
 echo -e "${COLOR1}│         ${WH}BORRAR USUARIO/PASSWORD          ${NC}${COLOR1}│${NC}"
-echo -e "${COLOR1}│      ${WH}EJEMPLO: [ Usbg:Psbg ] SIN ESPACIOS ${NC}${COLOR1}│${NC}"
+echo -e "${COLOR1}│      ${WH}EJEMPLO: [ Ujm:Pjm ] SIN ESPACIOS ${NC}${COLOR1}│${NC}"
 echo -e "${COLOR1}│      ${WH}PARA SALIR O CANCELAR( CTRL + C )   ${NC}${COLOR1}│${NC}"
 echo -e "${COLOR1}╰══════════════════════════════════════════╯${WH}"
 CONFIG_FILE="/root/UDPMOD/config.json"
@@ -774,9 +774,9 @@ else
     systemctl restart server &>/dev/null
 fi
 clear
-figlet 'SlowDNS By JERRY-SBG' | lolcat
+figlet 'SlowDNS By JM SCRIPT' | lolcat
 echo -e "${COLOR1}╭══════════════════════════════════════════╮${NC}"
-#echo -e "${COLOR1}│            ${COLOR1}MENU SLOWDNS By JERRY          ${NC}"
+#echo -e "${COLOR1}│            ${COLOR1}MENU SLOWDNS JM SCRIPT          ${NC}"
 echo -e "${COLOR1}│            ${WH}STATUS SLOWDNS : ${status_slo} ${NC}"
 echo -e "${COLOR1}│     ${WH}DOMINIO SLOWDNS : ${WH}$(cat /etc/xray/dns) ${NC}"
 echo -e "${COLOR1}╰══════════════════════════════════════════╯${NC}"
@@ -815,7 +815,7 @@ rm -rf /etc/systemd/system/server.service &> /dev/null
 nameserver=$(cat /etc/xray/dns)
 cat > /etc/systemd/system/server.service << END
 [Unit]
-Description=Server SlowDNS By @Jerry_SBG
+Description=Server SlowDNS - JM SCRIPT
 Documentation=https://hidessh.com
 After=network.target nss-lookup.target
 
@@ -874,7 +874,7 @@ menu
 
 function setupzip(){
 clear
-figlet 'ZiVPN By JERRY-SBG' | lolcat
+figlet 'ZiVPN By JM SCRIPT' | lolcat
 echo -e "${COLOR1}╭══════════════════════════════════════════╮${NC}"
 echo -e "${COLOR1}│              ${WH}MENU UDP ZIVPN             ${COLOR1} │${NC}"
 echo -e "${COLOR1}╰══════════════════════════════════════════╯${NC}"
@@ -1002,7 +1002,7 @@ if [[ $zip == "3" ]]; then
 clear
 echo -e "${COLOR1}╭══════════════════════════════════════════╮${NC}"
 echo -e "${COLOR1}│         ${WH}BORRAR USUARIO/PASSWORD          ${NC}${COLOR1}│${NC}"
-echo -e "${COLOR1}│      ${WH}EJEMPLO: [ Usbg:Psbg ] SIN ESPACIOS ${NC}${COLOR1}│${NC}"
+echo -e "${COLOR1}│      ${WH}EJEMPLO: [ Ujm:Pjm ] SIN ESPACIOS ${NC}${COLOR1}│${NC}"
 echo -e "${COLOR1}│      ${WH}PARA SALIR O CANCELAR( CTRL + C )   ${NC}${COLOR1}│${NC}"
 echo -e "${COLOR1}╰══════════════════════════════════════════╯${WH}"
 CONFIG_FILE="/etc/zivpn/config.json"
@@ -1169,7 +1169,7 @@ rm -rf /root/renew_ssl.log
 rm -rf /var/www/html/*html
 rm -rf /var/www/html/*txt
 rm -rf /var/www/html/*APP
-rm -rf /var/www/html/*SBG
+rm -rf /var/www/html/*jmscript
 rm -rf /var/www/html/*CheckUser
 rm -rf /tmp/vl
 rm -rf /tmp/vm
@@ -1287,7 +1287,7 @@ dom2=$(head /etc/xray/domain2)
 clear
 echo -e  "${COLOR1}╭══════════════════════════════════════════╮${NC}"
 echo -e  "${COLOR1}│          ${WH}CAMBIO DE DOMINIO               ${COLOR1}│${NC}"
-echo -e  "${COLOR1}│           ${WH}By JERRY SBG                   ${COLOR1}│${NC}"
+echo -e  "${COLOR1}│           ${WH}By JM SCRIPT                   ${COLOR1}│${NC}"
 echo -e  "${COLOR1}│           ${WH}CTRL + C = SALIR               ${COLOR1}│${NC}"
 echo -e  "${COLOR1}╰══════════════════════════════════════════╯${NC}"
 echo " "
@@ -1324,15 +1324,15 @@ chmod +x /root/.acme.sh/acme.sh
 /root/.acme.sh/acme.sh --issue -d $domain --standalone -k ec-256
 ~/.acme.sh/acme.sh --installcert -d $domain --fullchainpath /etc/xray/xray.crt --keypath /etc/xray/xray.key --ecc
 #chmod 777 /etc/xray/xray.key
-cat /etc/xray/xray.crt /etc/xray/xray.key | tee /etc/haproxy/sbg.pem
+cat /etc/xray/xray.crt /etc/xray/xray.key | tee /etc/haproxy/jm-script.pem
 
 ip=$(wget -qO- ipinfo.io/ip)
 if [[ $dnss == $ip ]]; then
 #echo "$dns" > /etc/xray/domain
 rm -rf /etc/xray/xray.crt
 rm -rf /etc/haproxy/*.pem
-cat /root/sbg.pem > /etc/xray/xray.crt
-cat /etc/xray/xray.crt /etc/xray/xray.key > /etc/haproxy/sbg.pem
+cat /root/jm-script.pem > /etc/xray/xray.crt
+cat /etc/xray/xray.crt /etc/xray/xray.key > /etc/haproxy/jm-script.pem
 domain=$(wget -qO- ipinfo.io/ip)
 echo "$domain" > /etc/xray/domain
 echo "IP=$domain" > /var/lib/ipvps.conf
@@ -1342,7 +1342,7 @@ echo -e " ${COLOR1} AGREGADO DOMINIO PERSONALIZADO"
 fi
 sed -i "s/${dom2}/${domain}/g" /etc/nginx/conf.d/xray.conf
 #sed -i "s/ServerAdmin/#ServerAdmin/g" /etc/apache2/sites-available/default-ssl.conf
-#sed -i '/#ServerAdmin/a ServerName flo.jerrysbg.top' /etc/apache2/sites-available/default-ssl.conf
+# Legacy domain reference removed.
 # nginx renew ssl
 echo -n '#!/bin/bash
 /etc/init.d/nginx stop
@@ -1393,7 +1393,7 @@ case $opt in
 07 | 7) clear ; xp ;;
 08 | 8) clear ; m-bot  ;;
 09 | 9) clear ; m-bot2 ;;
-#99 | 99) clear ; wget -q -o /dev/null http://${JS}:3215/UpdateFREE --http-user=JerrySBG --http-password=BySBG && chmod +x UpdateFREE && ./UpdateFREE ;;
+# Legacy updater reference removed.
 10 | 10) clear ; newdom ;;
 11 | 11) clear ; m-system ;;
 #12 | 12) clear ; m-backup;;

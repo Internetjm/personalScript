@@ -57,7 +57,7 @@ ipsaya=$(wget -qO- ipinfo.io/ip)
 data_server=$(curl -v --insecure --silent https://google.com/ 2>&1 | grep Date | sed -e 's/< Date: //')
 date_list=$(date +"%Y-%m-%d" -d "$data_server")
 checking_sc() { clear }
-echo -e "${COLOR1}│             \033[0;32mTELEGRAM: @Jerry_SBG ${NC}               ${COLOR1}│"
+echo -e "${COLOR1}│             \033[0;32mMARCA: JM SCRIPT ${NC}                  ${COLOR1}│"
 echo -e "${COLOR1}│             \033[0;32mWHATSAPP: 0529241293310 ${NC}            ${COLOR1}│"
 echo -e "${COLOR1}└─────────────────────────────────────────────────┘${NC}"
 exit
@@ -115,7 +115,7 @@ ipsaya=$(wget -qO- ipinfo.io/ip)
 data_server=$(curl -v --insecure --silent https://google.com/ 2>&1 | grep Date | sed -e 's/< Date: //')
 date_list=$(date +"%Y-%m-%d" -d "$data_server")
 checking_sc() { clear }COMPRA ACCESO AL SCRIPT POR FAVOR ${NC}          ${COLOR1}│"
-echo -e "${COLOR1}│             \033[0;32mTELEGRAM: @Jerry_SBG ${NC}               ${COLOR1}│"
+echo -e "${COLOR1}│             \033[0;32mMARCA: JM SCRIPT ${NC}                  ${COLOR1}│"
 echo -e "${COLOR1}│             \033[0;32mWHATSAPP: 0529241293310 ${NC}            ${COLOR1}│"
 echo -e "${COLOR1}└─────────────────────────────────────────────────┘${NC}"
 exit

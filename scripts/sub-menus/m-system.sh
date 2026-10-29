@@ -101,7 +101,7 @@ clear
 echo -e  "${COLOR1}╭══════════════════════════════════════════╮${NC}"
 echo -e  "${COLOR1}│             ${WH}GRACIAS POR                  ${COLOR1}│${NC}"
 echo -e  "${COLOR1}│        ${WH}MI AUTOSCRIPT PREMIUM             ${COLOR1}│${NC}"
-echo -e  "${COLOR1}│              ${WH}JERRY SBG                   ${COLOR1}│${NC}"
+echo -e  "${COLOR1}│              ${WH}JM SCRIPT                   ${COLOR1}│${NC}"
 echo -e  "${COLOR1}╰══════════════════════════════════════════╯${NC}"
 echo " "
 until [[ $dnss =~ ^[a-zA-Z0-9_.-]+$ ]]; do
@@ -112,8 +112,8 @@ if [ $dnss == $dom ]; then
 echo "$dom" > /etc/xray/domain
 rm -rf /etc/xray/xray.crt
 rm -rf /etc/haproxy/*.pem
-cat /root/sbg.pem > /etc/xray/xray.crt
-cat /etc/xray/xray.crt /etc/xray/xray.key > /etc/haproxy/sbg.pem
+cat /root/jm-script.pem > /etc/xray/xray.crt
+cat /etc/xray/xray.crt /etc/xray/xray.key > /etc/haproxy/jm-script.pem
 sed -i "s/${dom2}/${domain}/g" /etc/nginx/conf.d/xray.conf
 echo "IP=$dnss" > /var/lib/ipvps.conf
 rm -rf /etc/xray/domain2
@@ -142,7 +142,7 @@ echo -e "${COLOR1}│  [ 2 ]  \033[1;37mDomain xxx.berurat.cloud       ${NC}"
 echo -e "${COLOR1}│  [ 3 ]  \033[1;37mDomain xxx.xnxxms.cloud       ${NC}"
 echo -e "${COLOR1}│  [ 4 ]  \033[1;37mDomain xxx.vvpnstore.my.id       ${NC}"
 echo -e "${COLOR1}│  [ 5 ]  \033[1;37mDomain xxx.yogzvpn.cloud       ${NC}"
-echo -e "${COLOR1}│  [ 6 ]  \033[1;37mDomain xxx.jerrysbg.com      ${NC}"
+echo -e "${COLOR1}│  [ 6 ]  \033[1;37mDomain xxx.jm-script.example      ${NC}"
 echo -e "${COLOR1}╰══════════════════════════════════════════╯${NC}"
 until [[ $domain2 =~ ^[1-6]+$ ]]; do
 read -p "   Please select numbers : " domain2
@@ -232,7 +232,7 @@ fi
 if [[ $domain2 == "6" ]]; then
 clear
 echo -e  "${COLOR1}╭══════════════════════════════════════════╮${NC}"
-echo -e  "${COLOR1}│  \033[1;37mEjemplo de Subdominio xxx.jerrysbg.com        ${COLOR1}│${NC}"
+echo -e  "${COLOR1}│  \033[1;37mEjemplo de Subdominio xxx.jm-script.example        ${COLOR1}│${NC}"
 echo -e  "${COLOR1}│    \033[1;37mxxx Es Tu Subdominio               ${COLOR1}│${NC}"
 echo -e  "${COLOR1}╰══════════════════════════════════════════╯${NC}"
 echo " "
@@ -644,14 +644,14 @@ chmod +x /root/.acme.sh/acme.sh
 /root/.acme.sh/acme.sh --issue -d $domain --standalone -k ec-256
 ~/.acme.sh/acme.sh --installcert -d $domain --fullchainpath /etc/xray/xray.crt --keypath /etc/xray/xray.key --ecc
 chmod 777 /etc/xray/xray.key  
-cat /etc/xray/xray.crt /etc/xray/xray.key | tee /etc/haproxy/sbg.pem
+cat /etc/xray/xray.crt /etc/xray/xray.key | tee /etc/haproxy/jm-script.pem
 dom=$(wget -qO- ipinfo.io/ip)
 if [ $domain == $dom ]; then
 echo "$dom" > /etc/xray/domain
 rm -rf /etc/xray/xray.crt
 rm -rf /etc/haproxy/*.pem
-cat /root/sbg.pem > /etc/xray/xray.crt
-cat /etc/xray/xray.crt /etc/xray/xray.key > /etc/haproxy/sbg.pem
+cat /root/jm-script.pem > /etc/xray/xray.crt
+cat /etc/xray/xray.crt /etc/xray/xray.key > /etc/haproxy/jm-script.pem
 echo "IP=$dnss" > /var/lib/ipvps.conf
 fi
 # nginx renew ssl

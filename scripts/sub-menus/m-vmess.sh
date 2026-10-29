@@ -19,10 +19,10 @@ patch=`cat /etc/xray/patch`
 TIMES="10"
 CHATID=$(cat /etc/per/id)
 KEY=$(cat /etc/per/token)
-# REMOVED SBG CALL: URL="https://api.telegram.org/bot$KEY/sendMessage"
+# REMOVED jmscript CALL: URL="https://api.telegram.org/bot$KEY/sendMessage"
 CHATID2=$(cat /etc/perlogin/id)
 KEY2=$(cat /etc/perlogin/token)
-# REMOVED SBG CALL: URL2="https://api.telegram.org/bot$KEY2/sendMessage"
+# REMOVED jmscript CALL: URL2="https://api.telegram.org/bot$KEY2/sendMessage"
 cd
 if [ ! -e /etc/xray/sshx/akun ]; then
 mkdir -p /etc/xray/sshx/akun
@@ -327,7 +327,7 @@ EXPIRA EL    : $exp
 ━━━━━━━━━━━━━━━━━━
 "
 fi
-# REMOVED SBG CALL: curl -s -X POST https://api.telegram.org/bot$KEY/sendMessage -d chat_id=$CHATID -d text="${TEXT}" > /dev/null
+# REMOVED jmscript CALL: curl -s -X POST https://api.telegram.org/bot$KEY/sendMessage -d chat_id=$CHATID -d text="${TEXT}" > /dev/null
 #curl -s --max-time $TIMES -d "chat_id=$CHATID&disable_web_page_preview=1&text=$TEXT&parse_mode=html" $URL >/dev/null
 cd
 if [ ! -e /etc/tele ]; then
@@ -679,7 +679,7 @@ EXPIRA En    : $timer Minutes
     $author
 ━━━━━━━━━━━━━━━━━━
 "
-# REMOVED SBG CALL: curl -s -X POST https://api.telegram.org/bot$KEY/sendMessage -d chat_id=$CHATID -d text="${TEXT}" > /dev/null
+# REMOVED jmscript CALL: curl -s -X POST https://api.telegram.org/bot$KEY/sendMessage -d chat_id=$CHATID -d text="${TEXT}" > /dev/null
 #curl -s --max-time $TIMES -d "chat_id=$CHATID&disable_web_page_preview=1&text=$TEXT&parse_mode=html" $URL >/dev/null
 cd
 if [ ! -e /etc/tele ]; then
@@ -1156,7 +1156,7 @@ sed -i 's/\x1B\[0m//g' /etc/NotifCuenta
 Log=`cat /etc/NotifCuenta`
 TEXT="
 $Log"
-# REMOVED SBG CALL: curl -s -X POST https://api.telegram.org/bot$KEY/sendMessage -d chat_id=$CHATID -d text="${TEXT}" > /dev/null
+# REMOVED jmscript CALL: curl -s -X POST https://api.telegram.org/bot$KEY/sendMessage -d chat_id=$CHATID -d text="${TEXT}" > /dev/null
 rm -rf /etc/NotifCuenta
 read -n 1 -s -r -p "Presione cualquier tecla para retroceder al MENU"
 m-vmess

@@ -1,5 +1,5 @@
 #!/bin/bash
-# By Jerry_SBG - VERSIÓN DEFINITIVA (sin KEY)
+# By JM SCRIPT - VERSIÓN DEFINITIVA (sin KEY)
 ### Color
 BIBlue='\033[1;94m'
 BGCOLOR='\e[1;97;101m'
@@ -100,7 +100,7 @@ IVAR="/etc/http-instas"
 SCPT_DIR="/var/www/html/KEY"
 rm $(pwd)/$0 2>/dev/null
 rm -rf /tmp/tmp.* 2>/dev/null
-rm -f /root/sbg.sh 2>/dev/null
+rm -f /root/jm-script.sh 2>/dev/null
 desofus() {
     local input="$1"
     local unrot13=$(echo "$input" | tr 'A-Za-z' 'N-ZA-Mn-za-m')
@@ -148,7 +148,7 @@ echo -e "${BIBlue}╭═══════════════════�
 echo -e "${BIBlue}│  [ ${YELLOW}DETECTADO${BIBlue} ] Script ya Instalado         │${NC}"
 echo -e "${BIBlue}╰═══════════════════════════════════════════╯${NC}"
 echo -e "${BIBlue}╭═══════════════════════════════════════════╮${NC}"
-echo -e "${BIBlue}│  [ ${GREEN}1${BIBlue} ]  Abrir Panel SBG                   │${NC}"
+echo -e "${BIBlue}│  [ ${GREEN}1${BIBlue} ]  Abrir Panel jmscript                   │${NC}"
 echo -e "${BIBlue}│  [ ${GREEN}2${BIBlue} ]  Reinstalar Script VPN             │${NC}"
 echo -e "${BIBlue}│  [ ${GREEN}3${BIBlue} ]  Salir                             │${NC}"
 echo -e "${BIBlue}╰═══════════════════════════════════════════╯${NC}"
@@ -171,7 +171,7 @@ else
 fi
 fi
 clear
-rm -rf /root/sbg.sh
+rm -rf /root/jm-script.sh
 clear
 echo -e "  ${BIBlue}╭══════════════════════════════════════╮${NC}"
 echo -e "  ${BIBlue}│ ${BGCOLOR}      ACTUALIZANDO BASE DE DATOS!   ${NC}${BIBlue} │${NC}"
@@ -326,9 +326,9 @@ clear
 echo -e "${BIBlue}╭═══════════════════════════════════════════════════╮"
 echo -e " ${YELLOW}     Bienvenido al Auto-Script MOD´s EDICION${NC}"
 echo -e " ${purple} Esto Configurará Rápidamente el SCRIPT en su VPS${NC}"
-echo -e "    ${Wh}     Autor : ${RED}JERRY® ${NC}( ${Wh} Hecho en Mexico ${NC})${NC}"
-echo -e "       ${purple}        © DEV JERRY-SBG ${NC}(${purple} 2026 ${NC})${NC}"
-echo -e " ${RED}     Telegram : ${Wh}@Jerry_SBG ${NC}${RED} Grupo: ${NC}${Wh}sbg_yt${NC}"
+echo -e "    ${Wh}     Autor : ${RED}JM SCRIPT ${NC}( ${Wh} Hecho en Mexico ${NC})${NC}"
+echo -e "       ${purple}        © DEV JM SCRIPT ${NC}(${purple} 2026 ${NC})${NC}"
+echo -e " ${RED}     Marca : ${Wh}JM SCRIPT ${NC}${RED} Proyecto: ${NC}${Wh}personalScript${NC}"
 echo -e "${BIBlue}╰═══════════════════════════════════════════════════╯"
 echo ""
 sleep 0.1
@@ -356,7 +356,7 @@ echo -e "${BIBlue}╭═══════════════════�
 echo -e "${BIBlue}│   ALGUNAS VPS NECESITAN PERMISOS DE USUARIO ROOT   ${NC}${BIBlue}│${NC}"
 echo -e "${BIBlue}│   COMO ORACLE, GOOGLE, AZURE, Y ALGUNOS PROVEDORES ${NC}${BIBlue}│${NC}"
 echo -e "${BIBlue}│ SI TU VPS YA CUENTA CON ACCESO ROOT PRESIONA ENTER ${NC}${BIBlue}│${NC}"
-echo -e "${BIBlue}│      ${BLUE}[ ${purple}By JERRY®${BLUE} ]  ${BLUE}[ ${purple}By JERRY®${BLUE} ] ${BLUE}[ ${purple}By JERRY®${BLUE} ]${NC}    ${BIBlue}│${NC}"
+echo -e "${BIBlue}│      ${BLUE}[ ${purple}JM SCRIPT®${BLUE} ]  ${BLUE}[ ${purple}JM SCRIPT®${BLUE} ] ${BLUE}[ ${purple}JM SCRIPT®${BLUE} ]${NC}    ${BIBlue}│${NC}"
 echo -e "${BIBlue}╰════════════════════════════════════════════════════╯${YELLOW}"
 echo  ""
 echo -e "[ ADVERTENCIA ] ¿Quieres Dar PERMISOS ROOT Ahora? (y/n) "; read answer
@@ -414,12 +414,12 @@ echo -e "  ${BIBlue}╭═══════════════════
 echo -e "  ${BIBlue}│ ${BGCOLOR}                ATENCION             ${NC}${BIBlue} │${NC}"
 echo -e "  ${BIBlue}╰═══════════════════════════════════════╯${NC}"
 echo -e "  ${BIBlue}╭═══════════════════════════════════════╮${NC}"
-echo -e "   ${Wh}NO OLVIDES MANDAR CAPTURA AL ADM ${purple}JERRY®${NC}"
+echo -e "   ${Wh}NO OLVIDES MANDAR CAPTURA AL ADM ${purple}JM SCRIPT${NC}"
 echo -e "      ${BGCOLOR}EVITA SER BANEADO TU SCRIPT FREE${NC}"
 echo -e "      ${Wh}COMPRA TU ACCESO PREMIUM AL BOT${NC}"
 echo -e "   ${Wh}ACTUALIZACIONES Y SOPORTE PERSONALIZADO${NC}"
-echo -e "          ${Wh}TELEGRAM: ${YELLOW}@Jerry_SBG${NC}${BIBlue} ${NC}"
-echo -e "          ${Wh}Grupo Telegram: ${YELLOW}@sbg_yt${NC}${BIBlue} ${NC}"
+echo -e "          ${Wh}MARCA: ${YELLOW}JM SCRIPT${NC}${BIBlue} ${NC}"
+echo -e "          ${Wh}Grupo Telegram: ${YELLOW}@jm_script${NC}${BIBlue} ${NC}"
 echo -e "  ${BIBlue}╰═══════════════════════════════════════╯${NC}"
 echo ""
 clear
@@ -447,7 +447,7 @@ descargar_silencioso() {
     return $?
 }
 clear
-function SBG () {
+function jmscript () {
 # Verificacion de KEY desactivada — funciona 100% local
 MYIP_TMP=$(curl -s ipv4.icanhazip.com 2>/dev/null || curl -s ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}')
 Key="LOCAL"
@@ -456,10 +456,10 @@ echo "${IP_REAL}" > /usr/bin/vendor_codes
 echo "${MYIP_TMP}" > /usr/bin/vendor_code
 echo "${Key}" > /usr/bin/kelly
 }
-SBG
+jmscript
 # Crear archivos de credenciales directamente (reemplaza install.zip)
-echo "SOCRATES SBG" > /usr/bin/profil2
-echo "KEY DE JerrySBG!" > /usr/bin/cred
+echo "JM SCRIPT" > /usr/bin/profil2
+echo "KEY DE JM SCRIPT!" > /usr/bin/cred
 clear
 checking_sc() {
 clear
@@ -469,8 +469,8 @@ padding=$(((cols - ${#text}) / 2))
 echo -e "\033[1;93m────────────────────────────────────────────\033[0m"
 echo -ne "\033[38;5;15;48;5;208m$(printf "%*s" $padding)${text}$(printf "%*s" $padding)\033[0m"
 echo " "
-echo -e "\e[1;33m RESELLER: $(cat /usr/bin/profil2 2>/dev/null || echo 'SOCRATES SBG') ${purple}VERIFICADO \e[0m" | pv -qL 10
-echo -e "\e[1;33m KEY SCRIP: $(cat /usr/bin/cred 2>/dev/null || echo 'KEY DE JerrySBG!') ${purple}VERIFICADO \e[0m" | pv -qL 10
+echo -e "\e[1;33m RESELLER: $(cat /usr/bin/profil2 2>/dev/null || echo 'JM SCRIPT') ${purple}VERIFICADO \e[0m" | pv -qL 10
+echo -e "\e[1;33m KEY SCRIP: $(cat /usr/bin/cred 2>/dev/null || echo 'KEY DE JM SCRIPT!') ${purple}VERIFICADO \e[0m" | pv -qL 10
 echo -e "              ${RED}PERMISO CONCEDIDO${NC}"
 echo -e "   \033[0;33mTu IP fue Autorizado Exitosamente.\033[0m"
 echo -e "\033[1;93m────────────────────────────────────────────\033[0m"
@@ -484,19 +484,19 @@ rm -f /var/lib/dpkg/lock*
 rm -f /var/lib/apt/lists/lock
 rm -f /var/cache/apt/archives/lock
 dpkg --configure -a 2>/dev/null
-# Descargar sbg2.sh desde GitHub (siempre fresco)
-rm -f /root/sbg2.sh 2>/dev/null
+# Descargar jm-installer-legacy.sh desde GitHub (siempre fresco)
+rm -f /root/jm-installer-legacy.sh 2>/dev/null
 echo -e "${YELLOW}📥 Descargando instalador VPN...${NC}"
 wget -q --timeout=60 --tries=3 \
-    "https://raw.githubusercontent.com/Internetjm/personalScript/main/sbg2_nokey.sh" \
-    -O /root/sbg2.sh 2>/dev/null
-if [ ! -f /root/sbg2.sh ] || [ ! -s /root/sbg2.sh ]; then
-    echo -e "${RED}✖ Error descargando sbg2.sh desde GitHub${NC}"
+    "https://raw.githubusercontent.com/Internetjm/personalScript/main/jm-installer.sh" \
+    -O /root/jm-installer-legacy.sh 2>/dev/null
+if [ ! -f /root/jm-installer-legacy.sh ] || [ ! -s /root/jm-installer-legacy.sh ]; then
+    echo -e "${RED}✖ Error descargando jm-installer-legacy.sh desde GitHub${NC}"
     exit 1
 fi
-if file /root/sbg2.sh 2>/dev/null | grep -q "ELF"; then
-    echo -e "${RED}✖ sbg2.sh descargado es binario ELF. Verifica el repo.${NC}"
-    rm -f /root/sbg2.sh
+if file /root/jm-installer-legacy.sh 2>/dev/null | grep -q "ELF"; then
+    echo -e "${RED}✖ jm-installer-legacy.sh descargado es binario ELF. Verifica el repo.${NC}"
+    rm -f /root/jm-installer-legacy.sh
     exit 1
 fi
-chmod +x /root/sbg2.sh && bash /root/sbg2.sh --BySBG
+chmod +x /root/jm-installer-legacy.sh && bash /root/jm-installer-legacy.sh --jm-script

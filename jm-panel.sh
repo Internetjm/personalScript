@@ -1,5 +1,5 @@
 #!/bin/bash
-# SBG VPN Panel — By Jerry_SBG (versión local sin KEY)
+# jmscript VPN Panel — By JM SCRIPT (versión local sin KEY)
 
 BIBlue='\033[1;94m'
 BGCOLOR='\e[1;97;101m'
@@ -22,7 +22,7 @@ line=$(printf '═%.0s' $(seq 1 $((cols-2))))
 
 echo -e "${BIBlue}╭${line}╮${NC}"
 printf "${BIBlue}│${BGCOLOR}%*s${NC}${BIBlue}│${NC}\n" "$((cols-2))" ""
-printf "${BIBlue}│${BGCOLOR}%*s%-*s${NC}${BIBlue}│${NC}\n" $(( (cols-2-16)/2 )) "" $((cols-2)) "  SBG VPN SERVER  "
+printf "${BIBlue}│${BGCOLOR}%*s%-*s${NC}${BIBlue}│${NC}\n" $(( (cols-2-16)/2 )) "" $((cols-2)) "  JM SCRIPT VPN SERVER  "
 printf "${BIBlue}│${BGCOLOR}%*s${NC}${BIBlue}│${NC}\n" "$((cols-2))" ""
 echo -e "${BIBlue}╰${line}╯${NC}"
 echo ""
@@ -138,15 +138,15 @@ ver_xray() {
     echo -e "  ${WHITE}UUID  :${NC} ${UUID}"
     echo ""
     echo -e "  ${WHITE}Puertos WebSocket:${NC}"
-    echo -e "    VLESS  WS  : ${MYIP}:14016  path /vl-ByJerry"
-    echo -e "    VMess  WS  : ${MYIP}:23456  path /vm-ByJerry"
-    echo -e "    Trojan WS  : ${MYIP}:25432  path /tr-ByJerry"
-    echo -e "    SS     WS  : ${MYIP}:30300  path /ss-ByJerry"
+    echo -e "    VLESS  WS  : ${MYIP}:14016  path /vl-jm-script"
+    echo -e "    VMess  WS  : ${MYIP}:23456  path /vm-jm-script"
+    echo -e "    Trojan WS  : ${MYIP}:25432  path /tr-jm-script"
+    echo -e "    SS     WS  : ${MYIP}:30300  path /ss-jm-script"
     echo ""
     echo -e "  ${WHITE}Puertos gRPC:${NC}"
-    echo -e "    VLESS  gRPC: ${MYIP}:24456  srv vlgr-ByJerry"
-    echo -e "    VMess  gRPC: ${MYIP}:31234  srv vmgr-ByJerry"
-    echo -e "    Trojan gRPC: ${MYIP}:33456  srv trgr-ByJerry"
+    echo -e "    VLESS  gRPC: ${MYIP}:24456  srv vlgr-jm-script"
+    echo -e "    VMess  gRPC: ${MYIP}:31234  srv vmgr-jm-script"
+    echo -e "    Trojan gRPC: ${MYIP}:33456  srv trgr-jm-script"
     echo -e "  ${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo ""
     read -p "  Presiona Enter para continuar..."
@@ -160,8 +160,8 @@ ver_estado() {
 }
 
 # Instalar como comando global
-[ ! -f /usr/local/bin/menu ] && ln -sf /usr/local/bin/sbg-panel /usr/local/bin/menu 2>/dev/null
-[ ! -f /usr/local/bin/sbg-panel ] && cp "$0" /usr/local/bin/sbg-panel && chmod +x /usr/local/bin/sbg-panel
+[ ! -f /usr/local/bin/menu ] && ln -sf /usr/local/bin/jm-panel /usr/local/bin/menu 2>/dev/null
+[ ! -f /usr/local/bin/jm-panel ] && cp "$0" /usr/local/bin/jm-panel && chmod +x /usr/local/bin/jm-panel
 
 # Loop principal
 while true; do

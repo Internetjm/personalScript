@@ -1,5 +1,5 @@
 #!/bin/bash
-# SBG2 Installer — Versión GitHub (sin KEY ni servidor externo)
+# JM_INSTALLER Installer — Versión GitHub (sin KEY ni servidor externo)
 # Instala: Xray + Proxies SSH (Python) + Dropbear + BadVPN + OpenVPN + iptables
 
 BIBlue='\033[1;94m'
@@ -11,11 +11,11 @@ GREEN='\033[32m'
 purple='\033[1;95m'
 
 # Solo ejecutar con el argumento correcto
-[[ "$1" != "--BySBG" ]] && echo "Uso: $0 --BySBG" && exit 1
+[[ "$1" != "--jm-script" ]] && echo "Uso: $0 --jm-script" && exit 1
 
 clear
 echo -e "  ${BIBlue}╭══════════════════════════════════════╮${NC}"
-echo -e "  ${BIBlue}│ ${BGCOLOR}       INSTALANDO SBG VPN SERVER    ${NC}${BIBlue} │${NC}"
+echo -e "  ${BIBlue}│ ${BGCOLOR}       INSTALANDO jmscript VPN SERVER    ${NC}${BIBlue} │${NC}"
 echo -e "  ${BIBlue}╰══════════════════════════════════════╯${NC}"
 sleep 1
 
@@ -89,7 +89,7 @@ cat > /etc/xray/config.json << XRAYEOF
       },
       "streamSettings": {
         "network": "ws",
-        "wsSettings": { "path": "/vl-ByJerry" }
+        "wsSettings": { "path": "/vl-jm-script" }
       }
     },
     {
@@ -101,7 +101,7 @@ cat > /etc/xray/config.json << XRAYEOF
       },
       "streamSettings": {
         "network": "ws",
-        "wsSettings": { "path": "/vm-ByJerry" }
+        "wsSettings": { "path": "/vm-jm-script" }
       }
     },
     {
@@ -113,7 +113,7 @@ cat > /etc/xray/config.json << XRAYEOF
       },
       "streamSettings": {
         "network": "ws",
-        "wsSettings": { "path": "/w-ByJerry" }
+        "wsSettings": { "path": "/w-jm-script" }
       }
     },
     {
@@ -127,7 +127,7 @@ cat > /etc/xray/config.json << XRAYEOF
       },
       "streamSettings": {
         "network": "ws",
-        "wsSettings": { "path": "/tr-ByJerry" }
+        "wsSettings": { "path": "/tr-jm-script" }
       }
     },
     {
@@ -140,7 +140,7 @@ cat > /etc/xray/config.json << XRAYEOF
       },
       "streamSettings": {
         "network": "ws",
-        "wsSettings": { "path": "/ss-ByJerry" }
+        "wsSettings": { "path": "/ss-jm-script" }
       }
     },
     {
@@ -153,7 +153,7 @@ cat > /etc/xray/config.json << XRAYEOF
       },
       "streamSettings": {
         "network": "grpc",
-        "grpcSettings": { "serviceName": "vlgr-ByJerry" }
+        "grpcSettings": { "serviceName": "vlgr-jm-script" }
       }
     },
     {
@@ -165,7 +165,7 @@ cat > /etc/xray/config.json << XRAYEOF
       },
       "streamSettings": {
         "network": "grpc",
-        "grpcSettings": { "serviceName": "vmgr-ByJerry" }
+        "grpcSettings": { "serviceName": "vmgr-jm-script" }
       }
     },
     {
@@ -178,7 +178,7 @@ cat > /etc/xray/config.json << XRAYEOF
       },
       "streamSettings": {
         "network": "grpc",
-        "grpcSettings": { "serviceName": "trgr-ByJerry" }
+        "grpcSettings": { "serviceName": "trgr-jm-script" }
       }
     },
     {
@@ -191,7 +191,7 @@ cat > /etc/xray/config.json << XRAYEOF
       },
       "streamSettings": {
         "network": "grpc",
-        "grpcSettings": { "serviceName": "ssgr-ByJerry" }
+        "grpcSettings": { "serviceName": "ssgr-jm-script" }
       }
     }
   ],
@@ -252,8 +252,8 @@ EOF
 # ─── PROXIES PYTHON ──────────────────────────────────────────────────────────
 echo -e "${YELLOW}[3/8]${NC} Instalando proxies SSH..."
 
-# SBG WebSocket Proxy (puerto 701)
-cat > /usr/local/bin/sbg-proxy.py << 'PYEOF'
+# jmscript WebSocket Proxy (puerto 701)
+cat > /usr/local/bin/jm-proxy.py << 'PYEOF'
 #!/usr/bin/env python3
 import socket, threading, select, sys, time, logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -262,7 +262,7 @@ LISTENING_PORT = 701
 BUFLEN = 4096
 TIMEOUT = 300
 DEFAULT_HOST = '127.0.0.1:22'
-RESPONSE = 'HTTP/1.1 101 <b><font color="cyan"><i>WS + SSL By JERRY</i></font></b>\r\nContent-Length: 0\r\n\r\n'
+RESPONSE = 'HTTP/1.1 101 <b><font color="cyan"><i>WS + SSL JM SCRIPT</i></font></b>\r\nContent-Length: 0\r\n\r\n'
 
 class Server(threading.Thread):
     def __init__(self, host, port):
@@ -373,7 +373,7 @@ class ConnectionHandler(threading.Thread):
 
 def main():
     port = int(sys.argv[1]) if len(sys.argv) > 1 else LISTENING_PORT
-    logging.info(f'SBG WebSocket Proxy escuchando en 0.0.0.0:{port}')
+    logging.info(f'jmscript WebSocket Proxy escuchando en 0.0.0.0:{port}')
     server = Server(LISTENING_ADDR, port); server.start()
     while True:
         try: time.sleep(2)
@@ -381,7 +381,7 @@ def main():
 
 if __name__ == '__main__': main()
 PYEOF
-chmod +x /usr/local/bin/sbg-proxy.py
+chmod +x /usr/local/bin/jm-proxy.py
 
 # SSH WebSocket Internal (puerto 10015)
 cat > /usr/local/bin/ssh-ws-internal.py << 'PYEOF'
@@ -580,13 +580,13 @@ echo -e "${YELLOW}[4/8]${NC} Creando servicios systemd..."
 
 cat > /etc/systemd/system/ws.service << 'EOF'
 [Unit]
-Description=Python Proxy Mod By Jerry
+Description=Python Proxy Mod JM SCRIPT
 After=network.target nss-lookup.target
 
 [Service]
 Type=simple
 User=root
-ExecStart=/usr/bin/python3 /usr/local/bin/sbg-proxy.py 701
+ExecStart=/usr/bin/python3 /usr/local/bin/jm-proxy.py 701
 Restart=on-failure
 
 [Install]
@@ -672,7 +672,7 @@ sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd
 
 # Banner SSH
 cat > /etc/issue.net << 'EOF'
-<p style="text-align:center"><span style=background-color:#000000;"><b><font color="cyan">V I P  S E R V E R  SBG</font>
+<p style="text-align:center"><span style=background-color:#000000;"><b><font color="cyan">V I P  S E R V E R  jmscript</font>
 <BR><font color='#5539fb'>===============================</font><BR>
 <font color='red'> REGLAS !! </font><br>
 <font color="cyan">1 cuenta para 1 dispositivo<br>
@@ -683,7 +683,7 @@ No Contenido Ilegal<br><b></font>
 <font color="#FFFFFF"> = </>
 <font color="red">Baneado!</><font>
 <BR><font color='#5539fb'>===============================</font><BR>
-<font color="cyan">By Jerry SBG VPN</font><br>
+<font color="cyan">By JM SCRIPT VPN</font><br>
 EOF
 
 echo -e "${GREEN}  ✅ SSH configurado${NC}"
@@ -702,7 +702,7 @@ if command -v openvpn &>/dev/null; then
             cp -r /usr/share/easy-rsa/* /etc/openvpn/easy-rsa/ 2>/dev/null || true
             cd /etc/openvpn/easy-rsa
             EASYRSA_BATCH=1 ./easyrsa init-pki 2>/dev/null
-            EASYRSA_BATCH=1 EASYRSA_REQ_CN="SBG-CA" ./easyrsa build-ca nopass 2>/dev/null
+            EASYRSA_BATCH=1 EASYRSA_REQ_CN="jmscript-CA" ./easyrsa build-ca nopass 2>/dev/null
             EASYRSA_BATCH=1 ./easyrsa build-server-full server nopass 2>/dev/null
             EASYRSA_BATCH=1 ./easyrsa gen-dh 2>/dev/null
             EASYRSA_BATCH=1 ./easyrsa gen-crl 2>/dev/null
@@ -801,11 +801,11 @@ systemctl restart openvpn@server 2>/dev/null && \
 systemctl restart ssh 2>/dev/null || service ssh restart 2>/dev/null
 
 # ─── PANEL ───────────────────────────────────────────────────────────────────
-# Descargar e instalar el panel SBG
+# Descargar e instalar el panel jmscript
 wget -q --timeout=30 \
-    "https://raw.githubusercontent.com/Internetjm/personalScript/main/sbg-panel.sh" \
-    -O /usr/local/bin/sbg-panel 2>/dev/null && chmod +x /usr/local/bin/sbg-panel
-ln -sf /usr/local/bin/sbg-panel /usr/local/bin/menu 2>/dev/null
+    "https://raw.githubusercontent.com/Internetjm/personalScript/main/jm-panel.sh" \
+    -O /usr/local/bin/jm-panel 2>/dev/null && chmod +x /usr/local/bin/jm-panel
+ln -sf /usr/local/bin/jm-panel /usr/local/bin/menu 2>/dev/null
 
 # ─── FINALIZAR ───────────────────────────────────────────────────────────────
 clear
@@ -825,4 +825,4 @@ echo ""
 echo -e "  Escribe ${GREEN}menu${NC} para abrir el panel de administracion"
 echo ""
 sleep 3
-exec bash /usr/local/bin/sbg-panel
+exec bash /usr/local/bin/jm-panel

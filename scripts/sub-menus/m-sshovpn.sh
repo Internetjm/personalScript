@@ -17,11 +17,11 @@ author=$(cat /etc/profil)
 TIMES="10"
 CHATID=$(cat /etc/per/id)
 KEY=$(cat /etc/per/token)
-# REMOVED SBG CALL: URL="https://api.telegram.org/bot$KEY/sendMessage"
+# REMOVED jmscript CALL: URL="https://api.telegram.org/bot$KEY/sendMessage"
 domain=`cat /etc/xray/domain`
 CHATID2=$(cat /etc/perlogin/id)
 KEY2=$(cat /etc/perlogin/token)
-# REMOVED SBG CALL: URL2="https://api.telegram.org/bot$KEY2/sendMessage"
+# REMOVED jmscript CALL: URL2="https://api.telegram.org/bot$KEY2/sendMessage"
 cd
 if [ ! -e /etc/xray/sshx/akun ]; then
 mkdir -p /etc/xray/sshx/akun
@@ -320,7 +320,7 @@ echo -e "${COLOR1}│${NC} ${COLBG1}               ${WH}• TRIAL SSH Account �
 echo -e "${COLOR1}╰═════════════════════════════════════════════════╯${NC}"
 echo -e ""
 read -p "Expiracion (Hora [1-23]): " timer
-Login=SBG-`</dev/urandom tr -dc X-Z0-9 | head -c5`
+Login=jmscript-`</dev/urandom tr -dc X-Z0-9 | head -c5`
 Pass=By$author
 iplim=2
 masaaktif=1
@@ -903,7 +903,7 @@ read -p " INGRESA ID A ELIMINAR (EJEMPLO: 232323): " ids
 #kill -s SIGINT $ids
 #kill -HUP $ids
 kill -9 $ids >/dev/null 2>&1
-echo -e "${Yellow} SESION CERRADA CORRECTAMENTE By JERRY"
+echo -e "${Yellow} SESION CERRADA CORRECTAMENTE JM SCRIPT"
 echo -e "${Yellow} REGRESANDO AL MENU"
 sleep 1
 systemctl daemon-reload
@@ -921,7 +921,7 @@ read -p " INGRESA IDs A ELIMINAR (EJEMPLO: 232323): " ids
 #kill -s SIGINT $ids
 #kill -HUP $ids 1698638,
 kill -9 $ids >/dev/null 2>&1
-echo -e "${Yellow} SESIONES CERRADAS CORRECTAMENTE By JERRY"
+echo -e "${Yellow} SESIONES CERRADAS CORRECTAMENTE JM SCRIPT"
 echo -e "${Yellow} REGRESANDO AL MENU"
 sleep 1
 systemctl daemon-reload
@@ -941,7 +941,7 @@ sed -i '/auth,authpriv\.\*/c\*.*;auth,authpriv.*             /var/log/auth.log' 
 systemctl daemon-reload
 systemctl restart rsyslog
 systemctl restart haproxy
-echo -e "${yell}  FIX APLICADO CORRECTAMENTE By JERRY"
+echo -e "${yell}  FIX APLICADO CORRECTAMENTE JM SCRIPT"
 echo -e "${yell}  ESPERA UNOS SEGUNDOS PARA VER LOS USUARIOS"
 sleep 1
 m-sshovpn
