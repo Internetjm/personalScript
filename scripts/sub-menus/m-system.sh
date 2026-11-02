@@ -83,6 +83,7 @@ echo -e "\n  Ingresa tu subdominio personalizado (ej: mi.dominio.com)"
 read -rp "  Dominio: " _dn
 [[ -n "$_dn" ]] && echo "$_dn" > /etc/xray/domain && echo "  Dominio guardado: $_dn"
 }
+}
 dom2=$( cat /etc/xray/domain)
 echo $dom2 > /etc/xray/domain2
 clear
@@ -1081,3 +1082,4 @@ case $opt in
 00 |0) clear ; menu ; exit ;;
 *) echo -e "" ; echo "Lo presionaste mal" ; sleep 1 ; m-system ;;
 esac
+}

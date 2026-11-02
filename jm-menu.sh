@@ -110,6 +110,28 @@ status_beruangjatuh=$(check_service dropbear)
 status_udp=$(check_service udp-custom)
 status_zivpn=$(check_service zivpn)
 status_hysteria=$(check_service udpmod)
+
+show_ports() {
+    clear
+    echo -e "${COLOR1}Puertos actualmente escuchando${NC}"
+    echo -e "${WH}--------------------------------${NC}"
+    if command -v ss >/dev/null 2>&1; then
+        ss -H -lntup 2>/dev/null | awk '{print $1, $5, $7}' | sort -k2n
+    elif command -v netstat >/dev/null 2>&1; then
+        netstat -lntup 2>/dev/null
+    else
+        echo "No se encontró ss ni netstat."
+    fi
+    echo
+    echo -e "${WH}Puertos previstos por el panel:${NC}"
+    echo "SSH: 22 (el listado anterior muestra el valor real)"
+    echo "Dropbear: 109, 110, 143"
+    echo "WebSocket: 80, 8080, 8088, 8280, 8880, 2052, 2082, 2086, 2095"
+    echo "TLS: 443, 8443, 2053, 2087, 2096"
+    echo "HCR: 8880 | BHTTP: 8888"
+    read -n 1 -s -r -p "Presione cualquier tecla para regresar al menú"
+    menu
+}
 # TOTAL CREATE ACC VMESS
 vmess=$(grep -c -E "^#vmg " "/etc/xray/config.json")
 # TOTAL CREATE ACC VLESS
@@ -232,6 +254,7 @@ echo -e " ${COLOR1}│$NC ${WH}[${COLOR1}07${WH}]${NC} ${COLOR1}• ${WH}BORRAR 
 echo -e " ${COLOR1}│$NC ${WH}[${COLOR1}24${WH}]${NC} ${COLOR1}• ${WH}SERVICIOS ON ${WH}[${COLOR1}Menu${WH}]${NC}${COLOR1}│${NC} ${WH}[${COLOR1}25${WH}]${NC} ${COLOR1}• ${WH}INSTALAR SlowDNS${WH}[${COLOR1}Menu${WH}]${COLOR1}│${NC}"
 echo -e " ${COLOR1}│$NC ${WH}[${COLOR1}26${WH}]${NC} ${COLOR1}• ${WH}INSTALAR UDP ${WH}[${COLOR1}Menu${WH}]${NC}${COLOR1}│${NC} ${WH}[${COLOR1}66${WH}]${NC} ${COLOR1}• ${WH}DESINTALAR SCRIPT ${WH}[${COLOR1}🔴${WH}]${COLOR1}│${NC}"
 echo -e " ${COLOR1}╰══════════════════════════════════════════════════════════╯${NC}"
+echo -e " ${WH}[14] HCR SERVER   [15] BHTTP SERVER   [16] VER PUERTOS   [17] XRAY CORE${NC}"
 function rules(){
 COLOR1='\033[1;94m'  
 NC='\e[0m'
@@ -1402,6 +1425,8 @@ case $opt in
 13 | 13) clear ; restartservice ;;
 14 | 14) clear ; m-hcr ;;
 15 | 15) clear ; m-bhttp ;;
+16 | 16) clear ; show_ports ;;
+17 | 17) clear ; m-xray ;;
 20 | 20) clear ; setupslow ;;
 #21 | 21) clear ; $ressee2 ;;
 #20 | 22) clear ; $ressee3 ;;

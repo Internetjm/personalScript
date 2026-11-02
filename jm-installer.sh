@@ -334,7 +334,7 @@ unzip -o -j -P SCr1PtByJS7ruxBx1Sj /root/JM-SCRIPT/menu/menuFREE.zip "menu/*" -d
 chmod -R 755 /usr/local/sbin
 rm -rf /root/JM-SCRIPT/menu/*.zip
 # Reemplazar con versiones parcheadas (sin key/ban) los que lo tenian
-for sub in menu m-sshovpn m-vmess m-vless m-trojan m-system m-bot m-ss m-token m-hcr m-bhttp newdom restore; do
+for sub in menu m-sshovpn m-vmess m-vless m-trojan m-system m-bot m-ss m-token m-hcr m-bhttp m-xray newdom restore; do
     if [ "$sub" = "menu" ]; then
         wget -q "$GH_MAIN/jm-menu.sh" -O /usr/local/sbin/menu 2>/dev/null
     else
