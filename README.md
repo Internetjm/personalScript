@@ -46,6 +46,8 @@ Opciones incorporadas:
 
 - `14`: HCR Server.
 - `15`: BHTTP Server.
+- `16`: Ver puertos en escucha.
+- `17`: Xray / V2Ray Core (instalación guiada: pide el dominio V2Ray, emite el certificado y deja la config lista para las opciones 02-05).
 - `66`: desinstalación general del script.
 
 ## HCR Server

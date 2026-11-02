@@ -9,6 +9,29 @@ BHTTP_CONFIG="/etc/bhttp-panel.conf"
 BHTTP_PORT="8888"
 BHTTP_SSH_PORT="22"
 
+detect_ssh_port() {
+    if ! command -v ss >/dev/null 2>&1; then
+        return 1
+    fi
+    ss -lntpH 2>/dev/null \
+        | awk '$0 ~ /sshd/ {print $4}' \
+        | grep -oE '[0-9]+$' \
+        | sort -n -u \
+        | head -n 1
+}
+
+ssh_backend_listening() {
+    if command -v ss >/dev/null 2>&1; then
+        ss -lntH 2>/dev/null \
+            | awk '{print $4}' \
+            | grep -qE ":${1//./\\.}$"
+    else
+        netstat -lnt 2>/dev/null \
+            | awk '{print $4}' \
+            | grep -qE ":${1//./\\.}$"
+    fi
+}
+
 if [ "$(id -u)" -ne 0 ]; then
     echo "Este menú debe ejecutarse como root."
     read -n 1 -s -r -p "Presione una tecla para continuar"
@@ -33,7 +56,7 @@ EOF
 pause_menu() {
     echo
     read -n 1 -s -r -p "Presione una tecla para continuar"
-    if declare -F menu >/dev/null 2>&1; then menu; fi
+    if command -v menu >/dev/null 2>&1; then exec menu; fi
 }
 
 copy_bundle_from_project() {
@@ -67,6 +90,20 @@ install_bhttp() {
     [ -n "${selected_port}" ] && BHTTP_PORT="${selected_port}"
     read -r -p "Puerto SSH backend [${BHTTP_SSH_PORT}]: " selected_ssh_port
     [ -n "${selected_ssh_port}" ] && BHTTP_SSH_PORT="${selected_ssh_port}"
+    if ! ssh_backend_listening "${BHTTP_SSH_PORT}"; then
+        detected_ssh_port="$(detect_ssh_port || true)"
+        if [ -n "${detected_ssh_port}" ]; then
+            echo "SSH no escucha en ${BHTTP_SSH_PORT}; detecté sshd en ${detected_ssh_port}."
+            read -r -p "¿Usar ${detected_ssh_port} como backend BHTTP? [S/n]: " use_detected
+            case "${use_detected}" in
+                [nN]*) ;;
+                *) BHTTP_SSH_PORT="${detected_ssh_port}" ;;
+            esac
+        else
+            echo "Advertencia: no se detectó SSH escuchando en ${BHTTP_SSH_PORT}."
+            echo "BHTTP puede arrancar, pero la verificación del túnel fallará."
+        fi
+    fi
     if systemctl is-active --quiet "${BHTTP_SERVICE}"; then
         "${BHTTP_INSTALLER}" --desinstalar || return 1
     fi
@@ -135,7 +172,7 @@ while true; do
             ;;
         *)
             if [ -z "${option}" ]; then
-                if declare -F menu >/dev/null 2>&1; then menu; fi
+                if command -v menu >/dev/null 2>&1; then exec menu; fi
                 exit 0
             fi
             ;;

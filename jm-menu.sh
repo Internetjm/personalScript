@@ -78,38 +78,33 @@ touch /var/www/html/CheckUser
 fi
 clear
 MODEL2=$(cat /etc/os-release | grep -w PRETTY_NAME | head -n1 | sed 's/=//g' | sed 's/"//g' | sed 's/PRETTY_NAME//g')
+# check_service "unit1|unit2" ["patron pgrep -f"] [puerto ...]
+# ON si: systemd lo reporta activo, O el proceso esta vivo, O el puerto esta escuchando.
+# Asi un servicio que corre fuera de systemd (o con otro nombre de unidad) ya no sale OFF.
+# Ya NO reinicia servicios al dibujar el menu (para eso esta la opcion 13).
 check_service() {
-    local service_name=$1
-    # Verificar si el servicio existe
-    if systemctl list-unit-files "$service_name.service" >/dev/null 2>&1 || \
-       [ -f "/etc/systemd/system/$service_name.service" ] || \
-       [ -f "/lib/systemd/system/$service_name.service" ]; then
-        # Verificar si está activo
-        if systemctl is-active "$service_name" >/dev/null 2>&1; then
-            echo "${COLOR1}ON${NC}"
-        else
-            # Intentar reiniciar UNA VEZ si está instalado pero apagado
-            systemctl daemon-reload >/dev/null 2>&1
-            systemctl restart "$service_name" >/dev/null 2>&1
-            sleep 0.5           
-            if systemctl is-active "$service_name" >/dev/null 2>&1; then
-                echo "${COLOR1}ON${NC}"
-            else
-                echo "${RED}OFF${NC}"
-            fi
-        fi
-    else
-        echo "${RED}OFF${NC}"
-    fi
+    local units=$1 pat=${2:-} u p
+    shift; [ $# -gt 0 ] && shift
+    local -a _u
+    IFS='|' read -ra _u <<< "$units"
+    for u in "${_u[@]}"; do
+        if systemctl is-active --quiet "$u" 2>/dev/null; then echo "${COLOR1}ON${NC}"; return; fi
+    done
+    if [ -n "$pat" ] && pgrep -f -- "$pat" >/dev/null 2>&1; then echo "${COLOR1}ON${NC}"; return; fi
+    for p in "$@"; do
+        if ss -H -ltun 2>/dev/null | awk '{print $5}' | grep -Eq "[:.]${p}\$"; then echo "${COLOR1}ON${NC}"; return; fi
+    done
+    echo "${RED}OFF${NC}"
 }
-status_ssl=$(check_service haproxy)
-status_nginx=$(check_service nginx)
-status_xray=$(check_service xray)
-status_ws=$(check_service ws)
-status_beruangjatuh=$(check_service dropbear)
-status_udp=$(check_service udp-custom)
-status_zivpn=$(check_service zivpn)
-status_hysteria=$(check_service udpmod)
+status_ssl=$(check_service "stunnel4|stunnel5|haproxy" "stunnel|sbin/haproxy")
+status_haproxy=$(check_service haproxy "sbin/haproxy")
+status_nginx=$(check_service nginx "nginx: master")
+status_xray=$(check_service xray "bin/xray run|bin/xray -c" 14016 23456 24456 10085)
+status_ws=$(check_service "ws|ws-stunnel|ws-dropbear|ws-ovpn|sshws|jm-proxy" "ws-stunnel|ws-dropbear|ws-ovpn|ssh-ws-internal|jm-proxy|sshws" 701 10015)
+status_beruangjatuh=$(check_service dropbear "dropbear")
+status_udp=$(check_service udp-custom "udp-custom" 36715)
+status_zivpn=$(check_service zivpn "zivpn" 5667)
+status_hysteria=$(check_service udpmod "udpmod|UDPMOD|hysteria" 36712)
 
 show_ports() {
     clear
@@ -146,7 +141,7 @@ total_token=$(grep -c -E "^### " "/etc/xray/token")
 # TOTAL CREATE ACC TROJAN-GO
 #jumlah_trgo=$(grep -c -E "^### " "/etc/trojan-go/trgo")
 # TOTAL CREATE ACC SHADOW
-shadow=$(grep -c -E "^## " "/etc/xray/config.json")
+shadow=$(grep -c -E "^### " "/etc/xray/config.json")
 uphours=`uptime -p | awk '{print $2,$3}' | cut -d , -f1`
 upminutes=`uptime -p | awk '{print $4,$5}' | cut -d , -f1`
 uptimecek=`uptime -p | awk '{print $6,$7}' | cut -d , -f1`
@@ -228,7 +223,7 @@ echo -e " ${COLOR1}╰═══════════════════�
 echo -e "    ${COLOR1}╭═════════════════ • ${NC}${WH}STATUS SERVER${NC}${COLOR1} • ═══════════════╮${NC}"
 #sleep 1
 echo -e "     ${WH} SSH SSL : ${status_ssl} ${WH} XRAY : ${status_xray} ${WH} NGINX : ${status_nginx} ${WH} DROPBEAR : ${status_beruangjatuh}$NC"
-echo -e "         ${WH} HA-PROXY : ${status_ssl} ${WH} SSH WS : ${status_ws} ${WH} UDP-CUSTOM : ${status_udp} ${NC}"
+echo -e "         ${WH} HA-PROXY : ${status_haproxy} ${WH} SSH WS : ${status_ws} ${WH} UDP-CUSTOM : ${status_udp} ${NC}"
 echo -e "    ${COLOR1}╰═══════════════════════════════════════════════════╯${NC}"
 echo -e "        ${COLOR1}╭════════════════════════════════════════════╮${NC}"
 echo -e "                 ${COLOR1}$NC${WH}    LISTA CUENTAS PREMIUM ${NC}"
@@ -243,18 +238,33 @@ printf "                \033[1;37m%-16s ${COLOR1}%-4s${NC} ${WH}%-5s\e[0m\n" " S
 printf "                \033[1;37m%-16s ${COLOR1}%-4s${NC} ${WH}%-5s\e[0m\n" " TOKEN =" "$total_token" "ACCOUNT "
 echo -e "        ${COLOR1}╰════════════════════════════════════════════╯${NC}"
 echo -e " ${COLOR1}╭═════════════════════ • ${WH}LISTA MENU${NC}${COLOR1} • ═════════════════════╮${NC}"
-echo -e " ${COLOR1}│$NC ${WH}[${COLOR1}01${WH}]${NC} ${COLOR1}• ${WH}SSH-WS     ${RED}$total_ssh ${WH}[${COLOR1}Menu${WH}]${NC}${COLOR1}│${NC} ${WH}[${COLOR1}08${WH}]${NC} ${COLOR1}• ${WH}BOT PANEL       ${WH}[${COLOR1}Menu${WH}]${COLOR1}│${NC}"
-echo -e " ${COLOR1}│$NC ${WH}[${COLOR1}02${WH}]${NC} ${COLOR1}• ${WH}VMESS      ${RED}$vmess ${WH}[${COLOR1}Menu${WH}]${NC}${COLOR1}│${NC} ${WH}[${COLOR1}09${WH}]${NC} ${COLOR1}• ${WH}BOT NOTIFICAC.  ${WH}[${COLOR1}Menu${WH}]${COLOR1}│${NC}"    
-echo -e " ${COLOR1}│$NC ${WH}[${COLOR1}03${WH}]${NC} ${COLOR1}• ${WH}VLESS      ${RED}$vless ${WH}[${COLOR1}Menu${WH}]${NC}${COLOR1}│${NC} ${WH}[${COLOR1}10${WH}]${NC} ${COLOR1}• ${WH}CAMBIAR DOMINIO ${WH}[${COLOR1}Menu${WH}]${COLOR1}│${NC}"    
-echo -e " ${COLOR1}│$NC ${WH}[${COLOR1}04${WH}]${NC} ${COLOR1}• ${WH}SHADO-SOCK ${RED}$shadow ${WH}[${COLOR1}Menu${WH}]${NC}${COLOR1}│${NC} ${WH}[${COLOR1}89${WH}]${NC} ${COLOR1}• ${WH}EDITAR BANER    ${WH}[${COLOR1}Menu${WH}]${COLOR1}│${NC}"   
-echo -e " ${COLOR1}│$NC ${WH}[${COLOR1}05${WH}]${NC} ${COLOR1}• ${WH}TROJAN     ${RED}$trtls ${WH}[${COLOR1}Menu${WH}]${NC}${COLOR1}│${NC} ${WH}[${COLOR1}11${WH}]${NC} ${COLOR1}• ${WH}OTRAS OPCIONES  ${WH}[${COLOR1}Menu${WH}]${COLOR1}│${NC}" 
-#echo -e " ${COLOR1}│$NC ${WH}[${COLOR1}06${WH}]${NC} ${COLOR1}• ${WH}TROJAN-GO    ${WH}[${COLOR1}Menu${WH}] ${NC} ${COLOR1}│${NC} ${WH}[${COLOR1}12${WH}]${NC} ${COLOR1}• ${WH}RESPALDAR VPS   ${WH}[${COLOR1}Menu${WH}]${COLOR1}│${NC}" 
-echo -e " ${COLOR1}│$NC ${WH}[${COLOR1}06${WH}]${NC} ${COLOR1}• ${WH}MODO TOKEN ${RED}$total_token ${WH}[${COLOR1}Menu${WH}]${NC}${COLOR1}│${NC} ${WH}[${COLOR1}12${WH}]${NC} ${COLOR1}• ${WH}REINICIAR VPS   ${WH}[${COLOR1}Menu${WH}]${COLOR1}│${NC}" 
-echo -e " ${COLOR1}│$NC ${WH}[${COLOR1}07${WH}]${NC} ${COLOR1}• ${WH}BORRAR EXP   ${WH}[${COLOR1}Menu${WH}]${NC}${COLOR1}│${NC} ${WH}[${COLOR1}13${WH}]${NC} ${COLOR1}• ${WH}RESET SERVICIOS ${WH}[${COLOR1}Menu${WH}]${COLOR1}│${NC}"
-echo -e " ${COLOR1}│$NC ${WH}[${COLOR1}24${WH}]${NC} ${COLOR1}• ${WH}SERVICIOS ON ${WH}[${COLOR1}Menu${WH}]${NC}${COLOR1}│${NC} ${WH}[${COLOR1}25${WH}]${NC} ${COLOR1}• ${WH}INSTALAR SlowDNS${WH}[${COLOR1}Menu${WH}]${COLOR1}│${NC}"
-echo -e " ${COLOR1}│$NC ${WH}[${COLOR1}26${WH}]${NC} ${COLOR1}• ${WH}INSTALAR UDP ${WH}[${COLOR1}Menu${WH}]${NC}${COLOR1}│${NC} ${WH}[${COLOR1}66${WH}]${NC} ${COLOR1}• ${WH}DESINTALAR SCRIPT ${WH}[${COLOR1}🔴${WH}]${COLOR1}│${NC}"
+# Fila del menu: columna izquierda (con contador) | columna derecha. Ancho fijo => siempre alineado.
+mrow() { # $1=num izq  $2=nombre izq  $3=contador izq  $4=num der  $5=nombre der  $6=RED para el boton rojo
+    local l r
+    if [ -n "$3" ]; then
+        l=$(printf "${WH}[${COLOR1}%s${WH}]${NC} ${WH}%-11s${RED}%-4s${WH}[${COLOR1}Menu${WH}]${NC} " "$1" "$2" "$3")
+    else
+        l=$(printf "${WH}[${COLOR1}%s${WH}]${NC} ${WH}%-15s${WH}[${COLOR1}Menu${WH}]${NC} " "$1" "$2")
+    fi
+    if [ "${6:-}" = "RED" ]; then
+        r=$(printf "${WH}[${COLOR1}%s${WH}]${NC} ${WH}%-17s ${WH}[${COLOR1}🔴${WH}]${NC} " "$4" "$5")
+    else
+        r=$(printf "${WH}[${COLOR1}%s${WH}]${NC} ${WH}%-17s${WH}[${COLOR1}Menu${WH}]${NC}" "$4" "$5")
+    fi
+    echo -e " ${COLOR1}│${NC} ${l}${COLOR1}│${NC} ${r}${COLOR1}│${NC}"
+}
+mrow 01 "SSH-WS"       "$total_ssh"   08 "BOT PANEL"
+mrow 02 "VMESS"        "$vmess"       09 "BOT NOTIFICAC."
+mrow 03 "VLESS"        "$vless"       10 "CAMBIAR DOMINIO"
+mrow 04 "SHADO-SOCK"   "$shadow"      89 "EDITAR BANER"
+mrow 05 "TROJAN"       "$trtls"       11 "OTRAS OPCIONES"
+mrow 06 "MODO TOKEN"   "$total_token" 12 "REINICIAR VPS"
+mrow 07 "BORRAR EXP"   ""             13 "RESET SERVICIOS"
+mrow 14 "HCR SERVER"   ""             16 "VER PUERTOS"
+mrow 15 "BHTTP SERVER" ""             17 "XRAY CORE"
+mrow 24 "SERVICIOS ON" ""             25 "INSTALAR SlowDNS"
+mrow 26 "INSTALAR UDP" ""             66 "DESINTALAR SCRIPT" RED
 echo -e " ${COLOR1}╰══════════════════════════════════════════════════════════╯${NC}"
-echo -e " ${WH}[14] HCR SERVER   [15] BHTTP SERVER   [16] VER PUERTOS   [17] XRAY CORE${NC}"
 function rules(){
 COLOR1='\033[1;94m'  
 NC='\e[0m'
@@ -395,33 +405,9 @@ function setupudp2(){
 clear
 figlet '  UDPs By JM SCRIPT' | lolcat
 echo -e "${COLOR1}╭══════════════════════════════════════════╮${NC}"
-check_service() {
-    local service_name=$1
-    # Verificar si el servicio existe
-    if systemctl list-unit-files "$service_name.service" >/dev/null 2>&1 || \
-       [ -f "/etc/systemd/system/$service_name.service" ] || \
-       [ -f "/lib/systemd/system/$service_name.service" ]; then
-        # Verificar si está activo
-        if systemctl is-active "$service_name" >/dev/null 2>&1; then
-            echo "${COLOR1}ON${NC}"
-        else
-            # Intentar reiniciar UNA VEZ si está instalado pero apagado
-            systemctl daemon-reload >/dev/null 2>&1
-            systemctl restart "$service_name" >/dev/null 2>&1
-            sleep 0.5           
-            if systemctl is-active "$service_name" >/dev/null 2>&1; then
-                echo "${COLOR1}ON${NC}"
-            else
-                echo "${RED}OFF${NC}"
-            fi
-        fi
-    else
-        echo "${RED}OFF${NC}"
-    fi
-}
-status_zivpn=$(check_service zivpn)
-status_hysteria=$(check_service udpmod)
-status_udp=$(check_service udp-custom)
+status_zivpn=$(check_service zivpn "zivpn" 5667)
+status_hysteria=$(check_service udpmod "udpmod|UDPMOD|hysteria" 36712)
+status_udp=$(check_service udp-custom "udp-custom" 36715)
 echo -e "${COLOR1}│   ${WH}STATUS ZIVPN UDP  : ${status_zivpn} \e[1;32mPuertos: 1:19999      ${NC}"
 echo -e "${COLOR1}│   ${WH}STATUS HYSTERIA   : ${status_hysteria} \e[1;32mPuertos: 20000:39999  ${NC}"
 echo -e "${COLOR1}│   ${WH}STATUS UDP CUSTOM : ${status_udp} \e[1;32mPuertos: 40000:65535  ${NC}"
@@ -1402,8 +1388,6 @@ echo -e "${COLOR1}│$NC ${WH} ❈ ᴋᴇʏ ᴠᴇʀɪꜰɪᴄᴀᴅᴀ ${NC}: $
 echo -e "${COLOR1}│$NC ${WH} ❈ ${RED}𝐀𝐕𝐈𝐒𝐎${NC}: ${purple}ᴍᴀɴᴅᴀ ᴄᴀᴘᴛᴜʀᴀ ᴀʟ ᴀᴅᴍ ᴇᴠɪᴛᴀ ᴇʟ ʙᴀɴ ${NC}${COLOR1}"
 echo -e "${COLOR1}╰═══════════════════════════════════════════════════════════╯${NC}"
 echo -e ""
-echo -e " ${COLOR1}[14]${NC} ${WH}HCR SERVER${NC}"
-echo -e " ${COLOR1}[15]${NC} ${WH}BHTTP SERVER${NC}"
 echo -ne " ${WH}Selecciona Opc MENU ${COLOR1}: ${WH}"; read opt
 case $opt in
 01 | 1) clear ; m-sshovpn ;;

@@ -217,6 +217,24 @@ if ! libre "$PUERTO"; then
 fi
 info "puerto elegido: $PUERTO   (backend SSH: 127.0.0.1:$SSHPORT)"
 
+backend_escucha() {
+  if command -v ss >/dev/null 2>&1; then
+    ss -lntH 2>/dev/null | awk '{print $4}' | grep -qE ":${1}$"
+  elif command -v netstat >/dev/null 2>&1; then
+    netstat -lnt 2>/dev/null | awk '{print $4}' | grep -qE ":${1}$"
+  else
+    return 0
+  fi
+}
+
+if ! backend_escucha "$SSHPORT"; then
+  rojo "El backend SSH 127.0.0.1:$SSHPORT no esta escuchando."
+  echo "  Comprueba el puerto real con: ss -lntp"
+  echo "  Vuelve a instalar indicando el puerto correcto:"
+  echo "    bash $0 --puerto $PUERTO --ssh-puerto <PUERTO_SSH_REAL>"
+  exit 1
+fi
+
 # ------------------------------------------------------------ escribir servidor
 paso "2/4" "Instalando el servidor"
 mkdir -p "$DESTDIR"

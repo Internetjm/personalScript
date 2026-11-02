@@ -15,8 +15,8 @@ fi
 pause_menu() {
     echo
     read -n 1 -s -r -p "Presione una tecla para continuar"
-    if declare -F menu >/dev/null 2>&1; then
-        menu
+    if command -v menu >/dev/null 2>&1; then
+        exec menu
     fi
 }
 
@@ -90,7 +90,7 @@ while true; do
             ;;
         *)
             if [ -z "${option}" ]; then
-                if declare -F menu >/dev/null 2>&1; then menu; fi
+                if command -v menu >/dev/null 2>&1; then exec menu; fi
                 exit 0
             fi
             ;;
