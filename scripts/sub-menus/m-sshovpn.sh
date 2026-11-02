@@ -10,7 +10,146 @@ Yellow='\033[1;93m'     # Yellow
 Green='\033[1;92m'      # Green
 Blue='\033[1;94m'       # Blue
 Purple='\033[1;95m'     # Purple
-OBFS=$(cat /usr/bin/obfs)
+# ═════════ Helpers JM: puertos reales, OBFS y datos extra (Xray / HCR / BHTTP) ═════════
+# jm_ports <proceso> <valor_si_no_hay>  -> puertos TCP reales del proceso, ej: "109, 110, 143"
+jm_ports() {
+    local p
+    p=$(ss -H -ltnp 2>/dev/null | awk -v n="\"$1\"" 'index($0,n){print $4}' | grep -oE '[0-9]+$' | sort -n -u | paste -sd, - | sed 's/,/, /g')
+    echo "${p:-$2}"
+}
+# OBFS de Hysteria: se lee del config real (antes se leia /usr/bin/obfs, que no existe)
+jm_obfs() {
+    local o="" f=/root/UDPMOD/config.json
+    if [ -s "$f" ]; then
+        o=$(jq -r '.obfs // empty' "$f" 2>/dev/null)
+        [ -z "$o" ] && o=$(grep -oE '"obfs"[[:space:]]*:[[:space:]]*"[^"]*"' "$f" | head -n1 | sed -E 's/.*:[[:space:]]*"([^"]*)"/\1/')
+    fi
+    [ -z "$o" ] && [ -s /root/UDPMOD/data ] && o=$(sed 's/\x1b\[[0-9;]*m//g' /root/UDPMOD/data | awk -F': ' '/OBFS/{print $2; exit}' | tr -d '[:space:]')
+    [ -z "$o" ] && [ -s /usr/bin/obfs ] && o=$(tr -d '[:space:]' < /usr/bin/obfs)
+    echo "$o"
+}
+jm_hcr_port()   { grep -oE -- '--listen :[0-9]+' /etc/systemd/system/hcr-server.service 2>/dev/null | grep -oE '[0-9]+$' | head -n1; }
+jm_bhttp_port() { ( . /etc/bhttp-panel.conf 2>/dev/null; echo "${BHTTP_PORT:-}" ); }
+
+# Alta automatica del usuario SSH tambien en Xray (VMess, VLESS, Trojan; WS + gRPC).
+# HCR y BHTTP autentican contra el mismo usuario SSH del sistema, no necesitan cuenta aparte.
+jm_xray_add() {   # user exp uuid iplim
+    local user=$1 exp=$2 uuid=$3 lim=${4:-0} cfg=/etc/xray/config.json q p
+    [ -s "$cfg" ] && grep -q '^#vmessgrpc$' "$cfg" && grep -q '^#vlessgrpc$' "$cfg" && grep -q '^#trojangrpc$' "$cfg" || return 1
+    grep -q "\"email\": \"$user\"" "$cfg" && return 0
+    [ "$lim" = "0" ] && lim=9999
+    q=$((9999 * 1024 * 1024 * 1024))
+    for p in vmess vless trojan; do
+        mkdir -p /etc/$p
+        echo "$q" > /etc/$p/$user
+        echo "$lim" > /etc/$p/${user}IP
+    done
+    sed -i '/#vmess$/a\#vm '"$user $exp"'\
+},{"id": "'""$uuid""'","alterId": '"0"',"email": "'""$user""'"' "$cfg"
+    sed -i '/#vmessgrpc$/a\#vmg '"$user $exp $uuid"'\
+},{"id": "'""$uuid""'","alterId": '"0"',"email": "'""$user""'"' "$cfg"
+    sed -i '/#vless$/a\#vl '"$user $exp $uuid"'\
+},{"id": "'""$uuid""'","email": "'""$user""'"' "$cfg"
+    sed -i '/#vlessgrpc$/a\#vlg '"$user $exp"'\
+},{"id": "'""$uuid""'","email": "'""$user""'"' "$cfg"
+    sed -i '/#trojanws$/a\#tr '"$user $exp $uuid"'\
+},{"password": "'""$uuid""'","email": "'""$user""'"' "$cfg"
+    sed -i '/#trojangrpc$/a\#trg '"$user $exp"'\
+},{"password": "'""$uuid""'","email": "'""$user""'"' "$cfg"
+    systemctl is-active --quiet xray && systemctl restart xray >/dev/null 2>&1
+    return 0
+}
+# Baja del usuario en Xray (se llama al borrar el usuario SSH)
+jm_xray_del() {
+    local user=$1 cfg=/etc/xray/config.json t
+    [ -s "$cfg" ] || return 0
+    for t in vm vmg vl vlg tr trg; do
+        sed -i "/^#$t $user /,/^},{/d" "$cfg"
+    done
+    rm -f /etc/vmess/$user /etc/vmess/${user}IP /etc/vless/$user /etc/vless/${user}IP /etc/trojan/$user /etc/trojan/${user}IP
+    systemctl is-active --quiet xray && systemctl restart xray >/dev/null 2>&1
+    return 0
+}
+
+jm_sep()  { echo -e "${COLOR1} ━━━━━━━━━━━━━━━ ${NC}"; }
+jm_line() { echo -e "${COLOR1} $NC  ${WH}$1${COLOR1}: ${WH}$2"; }
+jm_link() { echo -e "${COLOR1} $NC  ${WH}$1${COLOR1}: ${NC}"; echo -e "${WH}$2${NC}"; }
+
+# Bloque final de la cuenta: SlowDNS, ZIVPN, Hysteria, UDP Custom, HCR, BHTTP y Xray
+jm_account_tail() {   # user pass exp uuid
+    local u=$1 p=$2 id=$4 ns key hp bp st patch cfg=/etc/xray/config.json
+    ns=$(cat /etc/xray/dns 2>/dev/null); key=$(cat /etc/slowdns/server.pub 2>/dev/null)
+    if [ -n "$ns" ] && [ -n "$key" ]; then
+        jm_line "SlowDNS    " "$ns:53@$u:$p"
+        jm_line "PORT SLWDNS" "Todos los Puertos"
+        jm_line "DOMINIO DNS" "1.1.1.1 / 8.8.8.8"
+        jm_line "NAMESERVER " "$ns"
+        jm_line "PUB KEY    " "$key"
+    else
+        jm_line "SlowDNS    " "no instalado (menu 25)"
+    fi
+    jm_sep
+    if [ -s /etc/zivpn/config.json ]; then
+        jm_line "SSH UDP ZIVPN " "$domain:1-19999"
+        jm_line "USUARIO & PW  " "$u:$p"
+    else
+        jm_line "SSH UDP ZIVPN " "no instalado (menu 26)"
+    fi
+    jm_sep
+    if [ -s /root/UDPMOD/config.json ]; then
+        jm_line "DOM UDP HYSTERIA " "$domain"
+        jm_line "USUARIO & PASSW  " "$u:$p"
+        jm_line "OBFS HYSTERIA " "${OBFS:-?}"
+        jm_line "PORT HYSTERIA " "20000-39999"
+    else
+        jm_line "UDP HYSTERIA " "no instalado (menu 26)"
+    fi
+    jm_sep
+    if [ -f /etc/systemd/system/udp-custom.service ]; then
+        jm_line "UDP CUSTOM " "$domain:40000-65535@$u:$p"
+    else
+        jm_line "UDP CUSTOM " "no instalado (menu 26)"
+    fi
+    jm_sep
+    if systemctl cat hcr-server.service >/dev/null 2>&1; then
+        hp=$(jm_hcr_port); st=""; systemctl is-active --quiet hcr-server || st=" (INACTIVO)"
+        jm_line "HCR SERVER " "$domain:${hp:-8880}@$u:$p$st"
+    else
+        jm_line "HCR SERVER " "no instalado (menu 14)"
+    fi
+    if systemctl cat bhttp.service >/dev/null 2>&1; then
+        bp=$(jm_bhttp_port); st=""; systemctl is-active --quiet bhttp || st=" (INACTIVO)"
+        jm_line "BHTTP      " "$domain:${bp:-8888}@$u:$p$st"
+    else
+        jm_line "BHTTP      " "no instalado (menu 15)"
+    fi
+    jm_sep
+    if [ -n "$id" ] && grep -q "\"email\": \"$u\"" "$cfg" 2>/dev/null; then
+        patch=$(tr -d '\r\n' < /etc/xray/patch 2>/dev/null)
+        local vm_tls vm_ntls vm_grpc
+        vm_tls="vmess://$(printf '{"v":"2","ps":"%s","add":"%s","port":"443","id":"%s","aid":"0","net":"ws","path":"/vm-%s","type":"none","host":"%s","tls":"tls"}' "$u" "$domain" "$id" "$patch" "$domain" | base64 -w 0)"
+        vm_ntls="vmess://$(printf '{"v":"2","ps":"%s","add":"%s","port":"80","id":"%s","aid":"0","net":"ws","path":"/vm-%s","type":"none","host":"%s","tls":"none"}' "$u" "$domain" "$id" "$patch" "$domain" | base64 -w 0)"
+        vm_grpc="vmess://$(printf '{"v":"2","ps":"%s","add":"%s","port":"443","id":"%s","aid":"0","net":"grpc","path":"vmgr-%s","type":"none","host":"%s","tls":"tls"}' "$u" "$domain" "$id" "$patch" "$domain" | base64 -w 0)"
+        jm_line "XRAY UUID  " "$id"
+        jm_line "XRAY Port  " "TLS 443 | NTLS 80"
+        jm_line "WS Path    " "/vm-$patch  /vl-$patch  /tr-$patch"
+        jm_line "gRPC Name  " "vmgr-$patch  vlgr-$patch  trgr-$patch"
+        jm_sep
+        jm_link "VMESS WS TLS " "$vm_tls"
+        jm_link "VMESS WS NTLS" "$vm_ntls"
+        jm_link "VMESS gRPC   " "$vm_grpc"
+        jm_link "VLESS WS TLS " "vless://${id}@${domain}:443?path=/vl-${patch}&security=tls&encryption=none&host=${domain}&type=ws&sni=${domain}#${u}"
+        jm_link "VLESS WS NTLS" "vless://${id}@${domain}:80?path=/vl-${patch}&security=none&encryption=none&host=${domain}&type=ws#${u}"
+        jm_link "VLESS gRPC   " "vless://${id}@${domain}:443?mode=gun&security=tls&encryption=none&type=grpc&serviceName=vlgr-${patch}&sni=${domain}#${u}"
+        jm_link "TROJAN WS TLS" "trojan://${id}@${domain}:443?path=%2Ftr-${patch}&security=tls&host=${domain}&type=ws&sni=${domain}#${u}"
+        jm_link "TROJAN gRPC  " "trojan://${id}@${domain}:443?mode=gun&security=tls&type=grpc&serviceName=trgr-${patch}&sni=${domain}#${u}"
+    else
+        jm_line "XRAY/V2RAY " "no instalado (menu 17)"
+    fi
+}
+SSHP=$(jm_ports sshd 22)
+DBP=$(jm_ports dropbear "109, 143")
+OBFS=$(jm_obfs)
 ISP=$(cat /etc/xray/isp)
 CITY=$(cat /etc/xray/city)
 author=$(cat /etc/profil)
@@ -37,8 +176,8 @@ checking_sc
 rm -rf /root/checkIP.*
 rm -rf /tmp/tmp.*
 clear
-sldomain=`cat /etc/xray/dns`
-slkey=`cat /etc/slowdns/server.pub`
+sldomain=`cat /etc/xray/dns 2>/dev/null`
+slkey=`cat /etc/slowdns/server.pub 2>/dev/null`
 clear
 echo -e "${COLOR1}╭═════════════════════════════════════════════════╮${NC}"
 echo -e "${COLOR1}│${NC} ${COLBG1}              ${WH}• SSH PANEL MENU •               ${NC} ${COLOR1}│ $NC"
@@ -88,6 +227,8 @@ useradd -e `date -d "$masaaktif days" +"%Y-%m-%d"` -s /bin/false -M $Login
 exp="$(chage -l $Login | grep "Account expires" | awk -F": " '{print $2}')"
 echo -e "$Pass\n$Pass\n"|passwd $Login &> /dev/null
 echo -e "### $Login $expi $Pass" >> /etc/xray/ssh
+JM_UUID=$(cat /proc/sys/kernel/random/uuid)
+jm_xray_add "$Login" "$expi" "$JM_UUID" "$iplim" || JM_UUID=""
 #CLIENT_EXISTS=$(grep -w $User /var/www/html/CheckUser | wc -l)
 #if [[ ${CLIENT_EXISTS} == '1' ]]; then
 #sed -i "/^$Login/d" /var/www/html/CheckUser
@@ -130,8 +271,8 @@ Expira El       :  $expi
 CITY             :  $CITY
 Host             :  $domain
 Login Limit      :  ${iplim} IP
-Port OpenSSH     :  22
-Port Dropbear    :  109, 143
+Port OpenSSH     :  $SSHP
+Port Dropbear    :  $DBP
 Port SSH WS      :  80,8080,8088,8280,8880,2052,2082,2086,2095
 Port SSH SSL WS  :  443
 Port SSL/TLS     :  443
@@ -183,8 +324,8 @@ Expira El       :  $expi
 CITY             :  $CITY
 Host             :  $domain
 Login Limit      :  ${iplim} IP
-Port OpenSSH     :  22
-Port Dropbear    :  109, 143
+Port OpenSSH     :  $SSHP
+Port Dropbear    :  $DBP
 Port SSH WS      :  80,8080,8088,8280,8880,2052,2082,2086,2095
 Port SSH SSL WS  :  443
 Port SSL/TLS     :  443
@@ -262,8 +403,8 @@ echo -e "${COLOR1} ━━━━━━━━━━━━━━━ ${NC}" | tee -a
 echo -e "${COLOR1} $NC  ${WH}City       ${COLOR1}: ${WH}$CITY" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
 echo -e "${COLOR1} $NC  ${WH}Host       ${COLOR1}: ${WH}$domain" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
 echo -e "${COLOR1} $NC  ${WH}Login Limit${COLOR1}: ${WH}${iplim} IP" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} $NC  ${WH}OpenSSH    ${COLOR1}: ${WH}22" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} $NC  ${WH}Dropbear   ${COLOR1}: ${WH}109, 143" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
+echo -e "${COLOR1} $NC  ${WH}OpenSSH    ${COLOR1}: ${WH}$SSHP" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
+echo -e "${COLOR1} $NC  ${WH}Dropbear   ${COLOR1}: ${WH}$DBP" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
 echo -e "${COLOR1} $NC  ${WH}SSH-WS     ${COLOR1}: ${WH}80,8080,8088,8280,8880,2052,2082,2086,2095" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
 echo -e "${COLOR1} $NC  ${WH}SSH-SSL-WS ${COLOR1}: ${WH}443" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
 echo -e "${COLOR1} $NC  ${WH}SSL/TLS    ${COLOR1}: ${WH}443" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
@@ -275,21 +416,7 @@ echo -e "${COLOR1} $NC  ${WH}OVPN UDP   ${COLOR1}: ${WH}https://$domain:8888/udp
 echo -e "${COLOR1} $NC  ${WH}OVPN SSL   ${COLOR1}: ${WH}https://$domain:8888/ssl.ovpn" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
 echo -e "${COLOR1} $NC  ${WH}UDPGW      ${COLOR1}: ${WH}7100-7300" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
 echo -e "${COLOR1} ━━━━━━━━━━━━━━━ ${NC}" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} $NC  ${WH}SlowDNS    ${COLOR1}: ${WH}$sldomain:53@$Login:$Pass" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} $NC  ${WH}PORT SLWDNS${COLOR1}: ${WH}Todos los Puertos" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} $NC  ${WH}DOMINIO DNS${COLOR1}: ${WH}1.1.1.1 / 8.8.8.8" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} $NC  ${WH}NAMESERVER ${COLOR1}: ${WH}$sldomain" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} $NC  ${WH}PUB KEY    ${COLOR1}: ${WH}$slkey" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} ━━━━━━━━━━━━━━━ ${NC}" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} $NC  ${WH}SSH UDP ZIVPN ${COLOR1}: ${WH}$domain:1-19999" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} $NC  ${WH}USUARIO & PW  ${COLOR1}: ${WH}$Login:$Pass" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} ━━━━━━━━━━━━━━━ ${NC}" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} $NC  ${WH}DOM UDP HYSTERIA ${COLOR1}: ${WH}$domain" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} $NC  ${WH}USUARIO & PASSW  ${COLOR1}: ${WH}$Login:$Pass" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} $NC  ${WH}OBFS HYSTERIA ${COLOR1}: ${WH}$OBFS" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} $NC  ${WH}PORT HYSTERIA ${COLOR1}: ${WH}20000-39999" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} ━━━━━━━━━━━━━━━ ${NC}" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} $NC  ${WH}UDP CUSTOM ${COLOR1}: ${WH}$domain:40000-65535@$Login:$Pass" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
+jm_account_tail "$Login" "$Pass" "$expi" "$JM_UUID" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log >(sed -E 's/\x1b\[[0-9;]*m//g' >> /var/www/html/ssh-$Login.txt)
 echo -e "${COLOR1} ━━━━━━━━━━━━━━━ ${NC}" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
 echo -e "${COLOR1} $NC  ${WH}SSH WS     ${COLOR1}: ${WH}$domain:80@$Login:$Pass" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
 echo -e "${COLOR1} $NC  ${WH}SSH SSL    ${COLOR1}: ${WH}$domain:443@$Login:$Pass" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
@@ -312,8 +439,8 @@ checking_sc
 rm -rf /root/checkIP.*
 rm -rf /tmp/tmp.*
 clear
-sldomain=`cat /etc/xray/dns`
-slkey=`cat /etc/slowdns/server.pub`
+sldomain=`cat /etc/xray/dns 2>/dev/null`
+slkey=`cat /etc/slowdns/server.pub 2>/dev/null`
 clear
 echo -e "${COLOR1}╭═════════════════════════════════════════════════╮${NC}"
 echo -e "${COLOR1}│${NC} ${COLBG1}               ${WH}• TRIAL SSH Account •           ${NC}${COLOR1} │$NC"
@@ -338,6 +465,8 @@ useradd -e `date -d "$masaaktif days" +"%Y-%m-%d"` -s /bin/false -M $Login
 exp="$(chage -l $Login | grep "Account expires" | awk -F": " '{print $2}')"
 echo -e "$Pass\n$Pass\n"|passwd $Login &> /dev/null
 echo -e "### $Login $expi $Pass" >> /etc/xray/ssh
+JM_UUID=$(cat /proc/sys/kernel/random/uuid)
+jm_xray_add "$Login" "$expi" "$JM_UUID" "$iplim" || JM_UUID=""
 #CLIENT_EXISTS=$(grep -w $User /var/www/html/CheckUser | wc -l)
 #if [[ ${CLIENT_EXISTS} == '1' ]]; then
 #sed -i "/^$User/d" /var/www/html/CheckUser
@@ -371,8 +500,8 @@ Expira En       :  $timer Minuto(s)
 CITY             :  $CITY
 Host             :  $domain
 Login Limit      :  ${iplim} IP
-Port OpenSSH     :  22
-Port Dropbear    :  109, 143
+Port OpenSSH     :  $SSHP
+Port Dropbear    :  $DBP
 Port SSH WS      :  80,8080,8088,8280,8880,2052,2082,2086,2095
 Port SSH SSL WS  :  443
 Port SSL/TLS     :  443
@@ -424,8 +553,8 @@ Expira En       :  $timer Minuto(s)
 CITY             :  $CITY
 Host             :  $domain
 Login Limit      :  ${iplim} IP
-Port OpenSSH     :  22
-Port Dropbear    :  109, 143
+Port OpenSSH     :  $SSHP
+Port Dropbear    :  $DBP
 Port SSH WS      :  80,8080,8088,8280,8880,2052,2082,2086,2095
 Port SSH SSL WS  :  443
 Port SSL/TLS     :  443
@@ -492,8 +621,8 @@ echo -e "${COLOR1} ━━━━━━━━━━━━━━━ ${NC}" | tee -a
 echo -e "${COLOR1} $NC  ${WH}City       ${COLOR1}: ${WH}$CITY" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
 echo -e "${COLOR1} $NC  ${WH}Host       ${COLOR1}: ${WH}$domain" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
 echo -e "${COLOR1} $NC  ${WH}Login Limit${COLOR1}: ${WH}${iplim} IP" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} $NC  ${WH}OpenSSH    ${COLOR1}: ${WH}22" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} $NC  ${WH}Dropbear   ${COLOR1}: ${WH}109, 143" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
+echo -e "${COLOR1} $NC  ${WH}OpenSSH    ${COLOR1}: ${WH}$SSHP" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
+echo -e "${COLOR1} $NC  ${WH}Dropbear   ${COLOR1}: ${WH}$DBP" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
 echo -e "${COLOR1} $NC  ${WH}SSH-WS     ${COLOR1}: ${WH}80,8080,8088,8280,8880,2052,2082,2086,2095" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
 echo -e "${COLOR1} $NC  ${WH}SSH-SSL-WS ${COLOR1}: ${WH}443" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
 echo -e "${COLOR1} $NC  ${WH}SSL/TLS    ${COLOR1}: ${WH}443" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
@@ -505,21 +634,7 @@ echo -e "${COLOR1} $NC  ${WH}OVPN UDP   ${COLOR1}: ${WH}https://$domain:8888/udp
 echo -e "${COLOR1} $NC  ${WH}OVPN SSL   ${COLOR1}: ${WH}https://$domain:8888/ssl.ovpn" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
 echo -e "${COLOR1} $NC  ${WH}UDPGW      ${COLOR1}: ${WH}7100-7300" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
 echo -e "${COLOR1} ━━━━━━━━━━━━━━━ ${NC}" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} $NC  ${WH}SlowDNS    ${COLOR1}: ${WH}$sldomain:53@$Login:$Pass" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} $NC  ${WH}PORT SLWDNS${COLOR1}: ${WH}Todos los Puertos" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} $NC  ${WH}NAMESERVER ${COLOR1}: ${WH}$sldomain" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} $NC  ${WH}DOMINIO DNS${COLOR1}: ${WH}1.1.1.1 / 8.8.8.8" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} $NC  ${WH}PUB KEY    ${COLOR1}: ${WH}$slkey" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} ━━━━━━━━━━━━━━━ ${NC}" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} $NC  ${WH}SSH UDP ZIVPN ${COLOR1}: ${WH}$domain:1-19999" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} $NC  ${WH}USUARIO & PW  ${COLOR1}: ${WH}$Login:$Pass" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} ━━━━━━━━━━━━━━━ ${NC}" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} $NC  ${WH}DOM UDP HYSTERIA ${COLOR1}: ${WH}$domain" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} $NC  ${WH}USUARIO HYSTERIA ${COLOR1}: ${WH}$Login:$Pass" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} $NC  ${WH}OBFS HYSTERIA ${COLOR1}: ${WH}$OBFS" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} $NC  ${WH}PORT HYSTERIA ${COLOR1}: ${WH}20000-39999" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} ━━━━━━━━━━━━━━━ ${NC}" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
-echo -e "${COLOR1} $NC  ${WH}UDP CUSTOM ${COLOR1}: ${WH}$domain:40000-65535@$Login:$Pass" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
+jm_account_tail "$Login" "$Pass" "$expi" "$JM_UUID" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log >(sed -E 's/\x1b\[[0-9;]*m//g' >> /var/www/html/ssh-$Login.txt)
 echo -e "${COLOR1} ━━━━━━━━━━━━━━━ ${NC}" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
 echo -e "${COLOR1} $NC  ${WH}HTTP WS    ${COLOR1}: ${WH}$domain:80@$Login:$Pass" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
 echo -e "${COLOR1} $NC  ${WH}HTTP SSL   ${COLOR1}: ${WH}$domain:443@$Login:$Pass" | tee -a /etc/xray/sshx/akun/log-create-${Login}.log
@@ -783,6 +898,7 @@ grep -rl "log-create-${Pengguna}.log" /etc/xray/sshx/akun/ | xargs rm -f
 grep -rl "trialssh" /etc/cron.d | xargs rm -f 
 if getent passwd $Pengguna > /dev/null 2>&1; then
 userdel $Pengguna > /dev/null 2>&1
+jm_xray_del "$Pengguna"
 echo -e "Usuario $Pengguna fue Eliminado."
 else
 echo -e "Falla: Usuario $Pengguna No Existe."

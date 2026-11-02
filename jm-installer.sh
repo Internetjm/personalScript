@@ -68,6 +68,8 @@ echo -e "${RED}ERROR: No se pudo descomprimir JM-SCRIPT.zip${NC}"
 exit 1
 fi
 chmod -R 755 /root/JM-SCRIPT/* >/dev/null 2>&1
+# Los scripts internos (ssh-vpn, insshws, ins-xray) usan /root/SBG/... -> enlazar a JM-SCRIPT
+ln -sfn /root/JM-SCRIPT /root/SBG
 rm -rf /root/JM-SCRIPT.zip >/dev/null 2>&1
 clear
 }
@@ -391,10 +393,10 @@ echo -e "${BIBlue}╭═══════════════════�
 echo -e "${BIBlue}│ ${BGCOLOR}         DESCARGANDO UDP CUSTOM         ${NC}${BIBlue} │${NC}"
 echo -e "${BIBlue}╰══════════════════════════════════════════╯${NC}"
 fun_bar 'res8'
-#echo -e "${BIBlue}╭══════════════════════════════════════════╮${NC}"
-#echo -e "${BIBlue}│ ${BGCOLOR}    PROCESANDO A INSTALAR OPENVPN       ${NC}${BIBlue} │${NC}"
-#echo -e "${BIBlue}╰══════════════════════════════════════════╯${NC}"
-#fun_bar 'res10'
+echo -e "${BIBlue}╭══════════════════════════════════════════╮${NC}"
+echo -e "${BIBlue}│ ${BGCOLOR}    PROCESANDO A INSTALAR OPENVPN       ${NC}${BIBlue} │${NC}"
+echo -e "${BIBlue}╰══════════════════════════════════════════╯${NC}"
+fun_bar 'res10'
 }
 function iinfo(){
 useradd -m -s /bin/bash jmscript 2>/dev/null
@@ -437,6 +439,7 @@ rm -rf /root/installsl.sh >/dev/null 2>&1
 rm -rf /root/slowdns.sh >/dev/null 2>&1
 rm -rf /root/udp-custom.sh >/dev/null 2>&1
 rm -rf /root/lolcat-master >/dev/null 2>&1
+rm -f /root/SBG >/dev/null 2>&1
 rm -rf /root/JM-SCRIPT >/dev/null 2>&1
 echo "VERSION_LOCAL" > /opt/.ver
 iinfo

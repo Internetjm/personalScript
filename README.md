@@ -52,7 +52,7 @@ Opciones incorporadas:
 
 ## HCR Server
 
-HCR usa por defecto el puerto `8880`, transporte `plain` y backend SSH en `127.0.0.1:22`.
+HCR usa por defecto el puerto `8880`, transporte `plain` y reenvía al SSH real del VPS (detecta sshd/dropbear; se puede forzar con `--ssh-port`).
 
 Instalación directa:
 

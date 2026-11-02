@@ -105,6 +105,33 @@ status_beruangjatuh=$(check_service dropbear "dropbear")
 status_udp=$(check_service udp-custom "udp-custom" 36715)
 status_zivpn=$(check_service zivpn "zivpn" 5667)
 status_hysteria=$(check_service udpmod "udpmod|UDPMOD|hysteria" 36712)
+status_slow=$(check_service "server|slowdns|dnstt" "dnstt-server" 5300)
+status_hcr=$(check_service hcr-server "hcr-server.*--listen")
+status_bhttp=$(check_service bhttp)
+# Puertos: se muestran los reales (ss) si el servicio escucha; si no, el valor configurado/nominal.
+lports() { ss -H -ltnp 2>/dev/null | awk -v re="$1" '$0 ~ re {print $4}' | grep -oE '[0-9]+$' | sort -n -u | paste -sd, -; }
+shortp() { # lista "a,b,c" | ancho max | nominal  ->  "a,b+N" si no cabe
+    local l=${1:-$3} n
+    if [ ${#l} -gt "$2" ]; then n=$(awk -F, '{print NF}' <<< "$l"); l="$(cut -d, -f1,2 <<< "$l")+$((n-2))"; fi
+    echo "${l:--}"
+}
+hcr_port=$(grep -oE -- '--listen :[0-9]+' /etc/systemd/system/hcr-server.service 2>/dev/null | grep -oE '[0-9]+$' | head -n1)
+bhttp_port=$( . /etc/bhttp-panel.conf 2>/dev/null; echo "${BHTTP_PORT:-}" )
+p_ssl=$(shortp "$(lports 'stunnel|haproxy')" 11 443)
+p_haproxy=$(shortp "$(lports haproxy)" 12 443)
+p_xray="443,80"
+p_nginx=$(shortp "$(lports nginx)" 12 81)
+p_dropbear=$(shortp "$(lports dropbear)" 12 109,143)
+p_ws=$(shortp "$(lports 'ws-stunnel|ws-dropbear|ws-ovpn|ssh-ws|jm-proxy|sshws')" 12 80,8080)
+p_slow="53>5300"
+p_hcr=${hcr_port:-8880}
+p_bhttp=${bhttp_port:-8888}
+# sitem NOMBRE ESTADO PUERTOS ANCHO  -> celda de ancho fijo con estado en color
+sitem() {
+    local name=$1 st pad="" ; [[ $2 == *ON* ]] && { st="${COLOR1}ON${NC}"; pad=" "; } || st="${RED}OFF${NC}"
+    printf "${WH}%-10s${COLOR1}:${NC} %b%s ${WH}%-${4}s${NC}" "$name" "$st" "$pad" "$3"
+}
+srow() { echo -e " ${COLOR1}│${NC} $(sitem "$1" "$2" "$3" 11)${COLOR1}│${NC} $(sitem "$4" "$5" "$6" 12)${COLOR1}│${NC}"; }
 
 show_ports() {
     clear
@@ -220,11 +247,14 @@ echo -e " ${COLOR1}│$NC${WH} ❈ ACTIVO        ${COLOR1}: ${WH}$uphours $upmin
 echo -e " ${COLOR1}│$NC${WH} ❈ IP VPS        ${COLOR1}: ${WH}$ipsaya${NC}"
 echo -e " ${COLOR1}│$NC${WH} ❈ DOMINIO       ${COLOR1}: ${WH}$(cat /etc/xray/domain)"
 echo -e " ${COLOR1}╰══════════════════════════════════════════════════════════╯${NC}"
-echo -e "    ${COLOR1}╭═════════════════ • ${NC}${WH}STATUS SERVER${NC}${COLOR1} • ═══════════════╮${NC}"
-#sleep 1
-echo -e "     ${WH} SSH SSL : ${status_ssl} ${WH} XRAY : ${status_xray} ${WH} NGINX : ${status_nginx} ${WH} DROPBEAR : ${status_beruangjatuh}$NC"
-echo -e "         ${WH} HA-PROXY : ${status_haproxy} ${WH} SSH WS : ${status_ws} ${WH} UDP-CUSTOM : ${status_udp} ${NC}"
-echo -e "    ${COLOR1}╰═══════════════════════════════════════════════════╯${NC}"
+echo -e " ${COLOR1}╭═══════════════════ • ${WH}STATUS SERVER${NC}${COLOR1} • ════════════════════╮${NC}"
+srow "SSH SSL"    "$status_ssl"        "$p_ssl"      "HA-PROXY"   "$status_haproxy" "$p_haproxy"
+srow "XRAY"       "$status_xray"       "$p_xray"     "NGINX"      "$status_nginx"   "$p_nginx"
+srow "DROPBEAR"   "$status_beruangjatuh" "$p_dropbear" "SSH WS"    "$status_ws"      "$p_ws"
+srow "ZIVPN"      "$status_zivpn"      "1-19999"     "HYSTERIA"   "$status_hysteria" "20000-39999"
+srow "UDP-CUSTOM" "$status_udp"        "40000-65535" "SLOWDNS"    "$status_slow"    "$p_slow"
+srow "HCR"        "$status_hcr"        "$p_hcr"      "BHTTP"      "$status_bhttp"   "$p_bhttp"
+echo -e " ${COLOR1}╰══════════════════════════════════════════════════════════╯${NC}"
 echo -e "        ${COLOR1}╭════════════════════════════════════════════╮${NC}"
 echo -e "                 ${COLOR1}$NC${WH}    LISTA CUENTAS PREMIUM ${NC}"
 echo -e "        ${COLOR1}      ═════════════════════════════════ ${NC}"

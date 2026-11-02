@@ -14,6 +14,7 @@ MAX_DOWNLOAD_FRAME="6144"
 DOWNLOAD_POLL_TIMEOUT="8s"
 TRANSPORT="plain"
 TRANSPORT_SET="false"
+SSH_PORT=""
 ACTION="install"
 
 TEMP_UNIT=""
@@ -74,6 +75,11 @@ parse_args() {
 				[ "$#" -ge 2 ] || fail "--transport requires a value."
 				TRANSPORT="$2"
 				TRANSPORT_SET="true"
+				shift 2
+				;;
+			--ssh-port)
+				[ "$#" -ge 2 ] || fail "--ssh-port requires a value."
+				SSH_PORT="$2"
 				shift 2
 				;;
 			--uninstall)
@@ -234,8 +240,21 @@ validate_bundle() {
 	fi
 }
 
+# Puerto real del SSH al que HCR reenvia (antes estaba fijo en 22).
+# Orden: --ssh-port, sshd escuchando, dropbear escuchando, 22.
+detect_ssh_port() {
+	local p=""
+	if command -v ss >/dev/null 2>&1; then
+		p="$(ss -lntpH 2>/dev/null | awk '/"sshd"/ {print $4}' | grep -oE '[0-9]+$' | sort -n -u | head -n 1)"
+		[ -n "${p}" ] || p="$(ss -lntpH 2>/dev/null | awk '/"dropbear"/ {print $4}' | grep -oE '[0-9]+$' | sort -n -u | head -n 1)"
+	fi
+	echo "${p:-22}"
+}
+
 render_unit() {
 	local tls_arguments=""
+	local ssh_port="${SSH_PORT:-$(detect_ssh_port)}"
+	case "${ssh_port}" in ""|*[!0-9]*) fail "--ssh-port must be a number." ;; esac
 	if [ "${TRANSPORT}" = "tls" ] || [ "${TRANSPORT}" = "auto" ]; then
 		tls_arguments=" --tls-cert ${TLS_CERT_PATH} --tls-key ${TLS_KEY_PATH}"
 	fi
@@ -255,7 +274,7 @@ Type=exec
 User=root
 Group=root
 WorkingDirectory=${SCRIPT_DIR}
-ExecStart=${BINARY_PATH} --listen :${PORT} --target 127.0.0.1:22 --transport ${TRANSPORT}${tls_arguments} --max-download-frame ${MAX_DOWNLOAD_FRAME} --download-poll-timeout ${DOWNLOAD_POLL_TIMEOUT}
+ExecStart=${BINARY_PATH} --listen :${PORT} --target 127.0.0.1:${ssh_port} --transport ${TRANSPORT}${tls_arguments} --max-download-frame ${MAX_DOWNLOAD_FRAME} --download-poll-timeout ${DOWNLOAD_POLL_TIMEOUT}
 Restart=on-failure
 RestartSec=5s
 TimeoutStopSec=15s
