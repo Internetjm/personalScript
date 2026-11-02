@@ -46,6 +46,130 @@ clear
 rm -rf /root/*.sh
 rm -rf /root/jm-installer-legacy.sh
 JS=$(cat /usr/bin/vendor_codes)
+# ── Reparación SSH SSL + SSH WS (HAProxy, nginx y ws) ─────────────────────────
+# Causas que corrige: falta /etc/haproxy/sbg.pem (HAProxy y nginx no arrancan),
+# nada escucha en 80/8080 para el WebSocket, y el servicio ws sin verificar.
+jm_reparar_ssh() {
+    local OK="\033[1;32m✔\033[0m" BAD="\033[1;31m✖\033[0m" NC="\033[0m" p
+    echo -e "\n\033[1;94m══ Reparando SSH SSL / SSH WS ══\033[0m"
+
+    # 1) Certificado para HAProxy (y nginx)
+    mkdir -p /etc/haproxy
+    if [ ! -s /etc/haproxy/sbg.pem ]; then
+        if [ -s /root/sbg.pem ]; then
+            cp /root/sbg.pem /etc/haproxy/sbg.pem
+        else
+            openssl req -x509 -newkey rsa:2048 -nodes -days 1095 \
+                -keyout /tmp/jm.key -out /tmp/jm.crt -subj "/CN=$(hostname)" >/dev/null 2>&1
+            cat /tmp/jm.key /tmp/jm.crt > /etc/haproxy/sbg.pem
+            rm -f /tmp/jm.key /tmp/jm.crt
+        fi
+    fi
+    chmod 600 /etc/haproxy/sbg.pem
+    [ -s /etc/haproxy/sbg.pem ] && echo -e " $OK certificado /etc/haproxy/sbg.pem" || echo -e " $BAD no se pudo crear /etc/haproxy/sbg.pem"
+
+    # 2) nginx: el sitio de ssh-vpn usaba el 8888 (lo necesita BHTTP) -> pasa al 81
+    if [ -f /etc/nginx/conf.d/vps.conf ]; then
+        sed -i -E 's/^([[:space:]]*)listen[[:space:]]+8888[^;]*;/\1listen 81 http2;/' /etc/nginx/conf.d/vps.conf
+    fi
+
+    # 3) nginx: WebSocket SSH (80, 8080...) -> sbg en 127.0.0.1:701
+    #    Solo se usan puertos libres (8880 y 8888 se dejan para HCR y BHTTP).
+    local listens="" 
+    for p in 80 8080 8088 8280 2052 2082 2086 2095; do
+        if ss -H -ltnp 2>/dev/null | awk -v p="$p" '$4 ~ "[:.]"p"$"' | grep -vq nginx; then
+            echo -e " \033[1;33m!\033[0m puerto $p ocupado por otro servicio, se omite"
+        else
+            listens="${listens}    listen ${p};\n"
+        fi
+    done
+    mkdir -p /etc/nginx/conf.d
+    {
+        echo "server {"
+        printf "%b" "$listens"
+        echo "    server_name _;"
+        echo "    location / {"
+        echo "        proxy_pass http://127.0.0.1:701;"
+        echo "        proxy_redirect off;"
+        echo "        proxy_http_version 1.1;"
+        echo "        proxy_set_header Upgrade \$http_upgrade;"
+        echo "        proxy_set_header Connection \"upgrade\";"
+        echo "        proxy_set_header Host \$http_host;"
+        echo "        proxy_set_header X-Real-IP \$remote_addr;"
+        echo "        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;"
+        echo "        proxy_read_timeout 1h;"
+        echo "        proxy_send_timeout 1h;"
+        echo "    }"
+        echo "}"
+    } > /etc/nginx/conf.d/ws.conf
+    rm -f /etc/nginx/sites-enabled/default /etc/nginx/conf.d/default.conf
+
+    # 4) Servicio ws (sbg en el 701)
+    if [ ! -x /usr/local/bin/sbg ]; then
+        for f in /root/JM-SCRIPT/sshws/sbg.py /root/SBG/sshws/sbg.py; do
+            [ -f "$f" ] && { cp "$f" /usr/local/bin/sbg; break; }
+        done
+        chmod +x /usr/local/bin/sbg 2>/dev/null
+    fi
+    command -v python3 >/dev/null 2>&1 || apt-get install -y python3 >/dev/null 2>&1
+    if [ ! -f /etc/systemd/system/ws.service ]; then
+        cat > /etc/systemd/system/ws.service <<'UNIT'
+[Unit]
+Description=SSH WebSocket (sbg)
+After=network.target nss-lookup.target
+
+[Service]
+Type=simple
+User=root
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
+ExecStart=/usr/local/bin/sbg 701
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+    fi
+    systemctl daemon-reload
+    systemctl enable ws >/dev/null 2>&1
+    systemctl restart ws >/dev/null 2>&1
+    sleep 1
+    if systemctl is-active --quiet ws; then
+        echo -e " $OK ws activo (127.0.0.1:701)"
+    else
+        echo -e " $BAD ws no arrancó:"; journalctl -u ws -n 8 --no-pager 2>/dev/null | sed 's/^/     /'
+    fi
+
+    # 5) nginx
+    if nginx -t >/dev/null 2>&1; then
+        systemctl enable nginx >/dev/null 2>&1
+        systemctl restart nginx >/dev/null 2>&1
+        systemctl is-active --quiet nginx && echo -e " $OK nginx activo (WS en los puertos de arriba)" \
+            || { echo -e " $BAD nginx no arrancó:"; journalctl -u nginx -n 8 --no-pager 2>/dev/null | sed 's/^/     /'; }
+    else
+        echo -e " $BAD nginx -t falló:"; nginx -t 2>&1 | tail -n 6 | sed 's/^/     /'
+    fi
+
+    # 6) HAProxy (SSH SSL en el 443). Si el modo es V2Ray, el 443 es de Xray.
+    if [ "${JM_MODO:-ssh}" = "v2ray" ]; then
+        systemctl disable --now haproxy >/dev/null 2>&1
+        echo -e " \033[1;33m!\033[0m HAProxy apagado: en modo V2Ray el 443 es de Xray"
+    elif [ -f /etc/haproxy/haproxy.cfg ]; then
+        if haproxy -c -f /etc/haproxy/haproxy.cfg >/dev/null 2>&1; then
+            systemctl enable haproxy >/dev/null 2>&1
+            systemctl restart haproxy >/dev/null 2>&1
+            systemctl is-active --quiet haproxy && echo -e " $OK HAProxy activo (SSH SSL 443)" \
+                || { echo -e " $BAD HAProxy no arrancó:"; journalctl -u haproxy -n 8 --no-pager 2>/dev/null | sed 's/^/     /'; }
+        else
+            echo -e " $BAD haproxy.cfg inválido:"; haproxy -c -f /etc/haproxy/haproxy.cfg 2>&1 | tail -n 6 | sed 's/^/     /'
+        fi
+    else
+        echo -e " $BAD no existe /etc/haproxy/haproxy.cfg (ssh-vpn no llegó a instalar HAProxy)"
+    fi
+    echo
+}
+
 function JM_INSTALLER () {
 clear
 echo -e "${BIBlue}╭══════════════════════════════════════════╮${NC}"
@@ -136,65 +260,28 @@ echo "$author" > /etc/profil
 author=$(cat /etc/profil)
 clear
 echo -e "${BIBlue}╭═══════════════════════════════════════════════════╮${NC}"
-echo -e "${BIBlue}│     \033[1;37mSeleccione Opcion para Configurar Dominio     ${BIBlue}│${NC}"
+echo -e "${BIBlue}│        \033[1;37m¿PARA QUÉ USARÁS ESTE VPS?${BIBlue}                │${NC}"
 echo -e "${BIBlue}╰═══════════════════════════════════════════════════╯${NC}"
 echo -e "${BIBlue}╭═══════════════════════════════════════════════════╮${NC}"
-echo -e "${BIBlue}│  [ 1 ]  \033[1;37mTu propio Dominio      ${NC}"
-echo -e "${BIBlue}│  [ 2 ]  \033[1;37mUtilice Sin Dominio  ${NC}"
-echo -e "${BIBlue}╰═══════════════════════════════════════════════════╯"
-#until [[ $domain =~ ^[1-2]+$ ]]; do 
-read -p "  Por favor seleccione los números 1 o 2 : " domain
-if [[ $domain == "1" ]]; then
-clear 
-echo -e "${BIBlue}╭══════════════════════════════════════════╮${NC}"
-echo -e "${BIBlue}│ \033[1;37mAGREGAR OBLIGATORIO DOMINIO O SUBDOMINIO ${BIBlue}│${NC}"
-echo -e "${BIBlue}│  \033[1;37mEVITA INSTALAR MAL EL SCRIPT SI YA HAZ  ${BIBlue}│${NC}"
-echo -e "${BIBlue}│  \033[1;37mOCUPADO EL DOMINIO VARIAS VECES ANTES   ${BIBlue}│${NC}"
-echo -e "${BIBlue}│      \033[1;37mCREA UN SUBDOMINIO NUEVO MEJOR      ${BIBlue}│${NC}"
-echo -e "${BIBlue}╰══════════════════════════════════════════╯${NC}"
-echo -e  "${BIBlue}╭══════════════════════════════════════════╮${NC}"
-echo -e  "${BIBlue}│               \033[1;37mGRACIAS POR                ${BIBlue}│${NC}"
-echo -e  "${BIBlue}│        \033[1;37mUSAR MI AUTOSCRIPT PREMIUM        ${BIBlue}│${NC}"
-echo -e  "${BIBlue}│                \033[1;37mJM SCRIPT 2025             ${BIBlue}│${NC}"
-echo -e  "${BIBlue}╰══════════════════════════════════════════╯"
-echo " "
-until [[ $dnss =~ ^[a-zA-Z0-9_.-]+$ ]]; do 
-read -rp "  Introduce tu Sub/Dominio aquí : " -e dnss
+echo -e "${BIBlue}│  [ 1 ]  \033[1;37mSSH  (SSH SSL 443 + WebSocket 80/8080)${NC}"
+echo -e "${BIBlue}│  [ 2 ]  \033[1;37mV2RAY / XRAY  (pide dominio, usa el 443)${NC}"
+echo -e "${BIBlue}╰═══════════════════════════════════════════════════╯${NC}"
+echo -e "  \033[1;33mSSH y V2Ray comparten el puerto 443: se elige uno.${NC}"
+JM_MODO_OPC=""
+until [[ $JM_MODO_OPC =~ ^[12]$ ]]; do
+read -rp "  Selecciona 1 o 2 : " JM_MODO_OPC
 done
-#if [[ $dnss == "1" ]]; then
-rm -rf /etc/xray
-rm -rf /etc/per
-mkdir -p /etc/xray
-mkdir -p /etc/nsdomain
-touch /etc/xray/domain
-echo "$dnss" > /etc/xray/domain
-echo "IP=$dnss" > /var/lib/ipvps.conf
-echo "JM SCRIPT" > /etc/xray/patch
-clear
-elif [[ $domain == "2" ]]; then
+if [[ $JM_MODO_OPC == "2" ]]; then JM_MODO="v2ray"; else JM_MODO="ssh"; fi
+export JM_MODO
 dom=$(wget -qO- ipinfo.io/ip)
 rm -rf /etc/xray
 rm -rf /etc/per
 mkdir -p /etc/xray
 mkdir -p /etc/nsdomain
-touch /etc/xray/domain
 echo "$dom" > /etc/xray/domain
 echo "IP=$dom" > /var/lib/ipvps.conf
-echo "JM SCRIPT" > /etc/xray/patch
+echo "jm-script" > /etc/xray/patch
 clear
-else
-rm -rf /etc/xray
-rm -rf /etc/per
-mkdir -p /etc/xray
-mkdir -p /etc/nsdomain
-touch /etc/xray/domain
-echo "  Se Utiliza IP Subdominio/Dominio Aleatorio"
-dom=$(wget -qO- ipinfo.io/ip)
-echo "$dom" > /etc/xray/domain
-echo "IP=$dom" > /var/lib/ipvps.conf
-echo "JM SCRIPT" > /etc/xray/patch
-clear
-fi
 }
 cat <<EOF>> /etc/rmbl/theme/green
 BG : \E[40;1;42m
@@ -370,10 +457,6 @@ echo -e "${BIBlue}│ ${BGCOLOR}  PROCESANDO A INSTALAR SSH & OVPN      ${NC}${B
 echo -e "${BIBlue}╰══════════════════════════════════════════╯${NC}"
 fun_bar 'res2'
 echo -e "${BIBlue}╭══════════════════════════════════════════╮${NC}"
-echo -e "${BIBlue}│ ${BGCOLOR}       PROCESANDO A INSTALAR XRAY       ${NC}${BIBlue} │${NC}"
-echo -e "${BIBlue}╰══════════════════════════════════════════╯${NC}"
-fun_bar 'res3'
-echo -e "${BIBlue}╭══════════════════════════════════════════╮${NC}"
 echo -e "${BIBlue}│ ${BGCOLOR}     PROCESANDO A INSTALAR WEBSOCKET    ${NC}${BIBlue} │${NC}"
 echo -e "${BIBlue}╰══════════════════════════════════════════╯${NC}"
 fun_bar 'res4'
@@ -397,6 +480,22 @@ echo -e "${BIBlue}╭═══════════════════�
 echo -e "${BIBlue}│ ${BGCOLOR}    PROCESANDO A INSTALAR OPENVPN       ${NC}${BIBlue} │${NC}"
 echo -e "${BIBlue}╰══════════════════════════════════════════╯${NC}"
 fun_bar 'res10'
+clear
+echo -e "${BIBlue}╭══════════════════════════════════════════╮${NC}"
+echo -e "${BIBlue}│ ${BGCOLOR}    CONFIGURANDO SSH SSL & WEBSOCKET    ${NC}${BIBlue} │${NC}"
+echo -e "${BIBlue}╰══════════════════════════════════════════╯${NC}"
+jm_reparar_ssh
+if [ "$JM_MODO" = "v2ray" ]; then
+echo -e "${BIBlue}╭══════════════════════════════════════════╮${NC}"
+echo -e "${BIBlue}│ ${BGCOLOR}       INSTALANDO V2RAY / XRAY          ${NC}${BIBlue} │${NC}"
+echo -e "${BIBlue}╰══════════════════════════════════════════╯${NC}"
+if [ -x /usr/local/sbin/m-xray ]; then
+/usr/local/sbin/m-xray --install || echo -e "${RED}V2Ray no quedó instalado. Repítelo desde el menú, opción 17.${NC}"
+else
+echo -e "${RED}No se descargó m-xray. Instala V2Ray desde el menú, opción 17.${NC}"
+fi
+fi
+sleep 5
 }
 function iinfo(){
 useradd -m -s /bin/bash jmscript 2>/dev/null

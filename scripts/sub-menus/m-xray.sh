@@ -723,6 +723,12 @@ show_xray_ports() {
     ss -lntup 2>/dev/null | grep -E 'xray|:(14016|23456|25432|30300|24456|31234|33456|30310|10085|81|443|8443) ' || echo " (sin puertos de Xray escuchando)"
 }
 
+# Modo no interactivo: el instalador principal lo llama como "m-xray --install"
+if [ "${1:-}" = "--install" ]; then
+    install_xray
+    exit $?
+fi
+
 # ── menú ──────────────────────────────────────────────────────────────────────
 while true; do
     clear
