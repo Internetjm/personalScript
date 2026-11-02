@@ -5,6 +5,7 @@ set -u
 XRAY_SERVICE="xray.service"
 XRAY_CONFIG="/etc/xray/config.json"
 XRAY_INSTALLER_URL="https://github.com/XTLS/Xray-install/raw/main/install-release.sh"
+XRAY_INSTALLER="/tmp/xray-install-release.sh"
 
 pause_menu() {
     read -r -n 1 -s -p "Presione cualquier tecla para regresar al menú"
@@ -12,6 +13,18 @@ pause_menu() {
     if declare -F menu >/dev/null 2>&1; then
         menu
     fi
+}
+
+download_installer() {
+    if ! command -v curl >/dev/null 2>&1; then
+        echo "No se encontró curl. Instálalo con: apt-get update && apt-get install -y curl"
+        return 1
+    fi
+    if ! curl -fL --retry 3 --connect-timeout 15 "${XRAY_INSTALLER_URL}" -o "${XRAY_INSTALLER}"; then
+        echo "No se pudo descargar el instalador oficial desde GitHub."
+        return 1
+    fi
+    chmod 700 "${XRAY_INSTALLER}"
 }
 
 ensure_base_config() {
@@ -60,10 +73,12 @@ install_xray() {
     fi
 
     echo "Instalando o reparando Xray..."
-    if ! JSON_PATH=/etc/xray bash -c "\$(curl -fsSL '${XRAY_INSTALLER_URL}')" @ install; then
+    if ! download_installer || ! JSON_PATH=/etc/xray "${XRAY_INSTALLER}" install; then
         echo "No se pudo descargar o ejecutar el instalador oficial de Xray."
+        rm -f "${XRAY_INSTALLER}"
         return 1
     fi
+    rm -f "${XRAY_INSTALLER}"
 
     ensure_base_config
     if ! /usr/local/bin/xray run -test -config "${XRAY_CONFIG}"; then
@@ -81,7 +96,10 @@ uninstall_xray() {
     case "${confirm}" in
         [sS][iI]|[sS])
             systemctl disable --now "${XRAY_SERVICE}" 2>/dev/null || true
-            bash -c "\$(curl -fsSL '${XRAY_INSTALLER_URL}')" @ remove
+            if download_installer; then
+                "${XRAY_INSTALLER}" remove
+                rm -f "${XRAY_INSTALLER}"
+            fi
             echo "Xray fue desinstalado. Se conserva ${XRAY_CONFIG}."
             ;;
         *) echo "Operación cancelada." ;;
