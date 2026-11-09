@@ -1133,11 +1133,42 @@ fi
 done
 clear
 user=$(grep -E "^#vmg " "/etc/xray/config.json" | cut -d ' ' -f 2 | sed -n "${CLIENT_NUMBER}"p)
-cat /etc/vmess/akun/log-create-${user}.log
-cat /etc/vmess/akun/log-create-${user}.log > /etc/NotifCuenta
-sed -i 's/\x1B\[1;37m//g' /etc/NotifCuenta
-sed -i 's/\x1B\[1;96m//g' /etc/NotifCuenta
-sed -i 's/\x1B\[0m//g' /etc/NotifCuenta
+log_file="/etc/vmess/akun/log-create-${user}.log"
+if [ -s "$log_file" ]; then
+    sed -e 's/\x1B\[1;37m//g' -e 's/\x1B\[1;96m//g' -e 's/\x1B\[0m//g' "$log_file" | tee /etc/NotifCuenta
+else
+    exp=$(grep -E "^#vmg ${user} " "/etc/xray/config.json" | cut -d ' ' -f 3)
+    uuid=$(grep -E "^#vmg ${user} " "/etc/xray/config.json" | cut -d ' ' -f 4)
+    iplim=$(cat "/etc/vmess/${user}IP" 2>/dev/null || echo "Ilimitado")
+    [ "$iplim" = "9999" ] && iplim="Ilimitado"
+    quota_file="/etc/vmess/${user}"
+    if [ -s "$quota_file" ]; then
+        quota_gb=$(( $(cat "$quota_file") / 1024 / 1024 / 1024 ))
+        quota="${quota_gb} GB"
+    else
+        quota="Ilimitada"
+    fi
+    {
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "        CONFIGURACION CUENTA VMESS"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "Usuario       : ${user}"
+        echo "UUID          : ${uuid:-No disponible}"
+        echo "Dominio       : ${domain:-No configurado}"
+        echo "Expiracion    : ${exp:-No disponible}"
+        echo "Limite IP     : ${iplim}"
+        echo "Limite cuota  : ${quota}"
+        echo "Puerto TLS    : 443"
+        echo "Puerto NTLS   : 80,8080,8088,8280,8880,2052,2082,2086,2095"
+        echo "Puerto gRPC   : 443"
+        echo "Red/Path      : WebSocket /vm-${patch:-x}"
+        echo "Servicio Xray : $(systemctl is-active xray 2>/dev/null || echo desconocido)"
+        echo "SlowDNS       : $(systemctl is-active slowdns 2>/dev/null || systemctl is-active dnstt-server 2>/dev/null || echo desconocido)"
+        echo "UDP-Custom    : $(systemctl is-active udp-custom 2>/dev/null || echo desconocido)"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "Aviso: no existia el archivo historico ${log_file}."
+    } | tee /etc/NotifCuenta
+fi
 #cat /etc/NotifCuenta > /root/vmess-${user}
 #cd /root
 #zip -r Vmess-${user}.zip vmess-${user} > /dev/null 2>&1
@@ -1391,19 +1422,21 @@ echo " Escriba [999] para Eliminar todas las Cuentas"
 echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo "     No  User   Expired"
 grep -E "^### " "/etc/vmess/akundelete" | cut -d ' ' -f 2-3 | nl -s ') '
-until [[ ${CLIENT_NUMBER} -ge 1 && ${CLIENT_NUMBER} -le ${NUMBER_OF_CLIENTS} ]]; do
-if [[ ${CLIENT_NUMBER} == '1' ]]; then
-read -rp "Seleccione un Cliente [1]: " CLIENT_NUMBER
-else
-read -rp "Seleccione un Cliente [1-${NUMBER_OF_CLIENTS}] to Unlock: " CLIENT_NUMBER
-if [[ ${CLIENT_NUMBER} == '0' ]]; then
-m-vmess
-fi
-if [[ ${CLIENT_NUMBER} == '999' ]]; then
-rm /etc/vmess/akundelete
-m-vmess
-fi
-fi
+until [[ ${CLIENT_NUMBER} == '999' || ( ${CLIENT_NUMBER} -ge 1 && ${CLIENT_NUMBER} -le ${NUMBER_OF_CLIENTS} ) ]]; do
+    if [[ ${NUMBER_OF_CLIENTS} == '1' ]]; then
+        read -rp "Seleccione un Cliente [1] (999 borrar expirados): " CLIENT_NUMBER
+    else
+        read -rp "Seleccione un Cliente [1-${NUMBER_OF_CLIENTS}] (999 borrar expirados): " CLIENT_NUMBER
+    fi
+    if [[ ${CLIENT_NUMBER} == '0' ]]; then
+        m-vmess
+        return
+    fi
+    if [[ ${CLIENT_NUMBER} == '999' ]]; then
+        rm -f /etc/vmess/akundelete
+        m-vmess
+        return
+    fi
 done
 until [[ $masaaktif =~ ^[0-9]+$ ]]; do
 read -p "EXPIRACION (DIAS): " masaaktif
