@@ -13,10 +13,6 @@ WH='\033[1;37m'
 yl='\033[33m';
 purple="\033[1;95m"
 CYAN='\033[1;36m'
-BLUE='\033[1;34m'
-ORANGE='\033[38;5;208m'
-MAGENTA='\033[1;35m'
-YELLOW='\033[1;33m'
 tram=$( free -m | awk 'NR==2 {print $2}' )
 uram=$( free -m | awk 'NR==2 {print $3}' )
 #ISP=$(cat /etc/xray/isp)
@@ -238,20 +234,9 @@ m-bot2
 fi
 menu
 }
-cyber_frame_top() {
-    echo -e " ${BLUE}╱╲╱╲╱╲${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${purple}╱╲╱╲${NC}"
-    echo -e " ${BLUE}╱╲${NC} ${CYAN}░▒▓${NC} ${WH}JM SCRIPT VPN SERVER${NC} ${CYAN}░▒▓${NC} ${BLUE}╲╱${NC}"
-    echo -e " ${purple}╲╱╲╱${NC} ${CYAN}⬡ ⬡ ⬡   AUTOSCRIPT MULTIPORT FREE   ⬡ ⬡ ⬡${NC} ${purple}╲╱╲╱${NC}"
-    echo -e " ${CYAN}╰━━━━━━━╱╲━━━━━━━━━━━━━━━━━━━━╱╲━━━━━━━╯${NC}"
-}
-cyber_frame_bottom() {
-    echo -e " ${CYAN}╰━━━━━━━╲╱━━━━━━━━━━━━━━━━━━━━╲╱━━━━━━━╯${NC}"
-    echo -e " ${purple}╱╲╱╲${NC} ${BLUE}░▒▓░▒▓░▒▓${NC} ${CYAN}━━ JM SCRIPT VPN PANEL ━━${NC} ${BLUE}░▒▓░▒▓░▒▓${NC} ${purple}╱╲╱╲${NC}"
-}
 clear && clear && clear
 sleep 0.01
 clear
-cyber_frame_top
 echo -e " ${COLOR1}╭══════════════════════════════════════════════════════════╮${NC}"
 echo -e " ${COLOR1}│${NC} \E[40;1;30m       ${WH} .::::. ᴀᴜᴛᴏꜱᴄʀɪᴘᴛ ᴍᴜʟᴛɪᴘᴏʀᴛ ꜰʀᴇᴇ .::::.         ${NC} ${COLOR1}│ $NC"
 echo -e " ${COLOR1}╰══════════════════════════════════════════════════════════╯${NC}"
@@ -338,7 +323,6 @@ mrow 18 "API BACKEND"  ""             89 "EDITAR BANNER"
 mrow 24 "SERVICIOS ON" ""             25 "INSTALAR SlowDNS"
 mrow 26 "INSTALAR UDP" ""             66 "DESINTALAR SCRIPT" RED
 echo -e " ${COLOR1}╰══════════════════════════════════════════════════════════╯${NC}"
-cyber_frame_bottom
 function rules(){
 COLOR1='\033[1;94m'  
 NC='\e[0m'
