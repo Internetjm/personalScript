@@ -238,9 +238,20 @@ m-bot2
 fi
 menu
 }
+cyber_frame_top() {
+    echo -e " ${BLUE}╱╲╱╲╱╲${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${purple}╱╲╱╲${NC}"
+    echo -e " ${BLUE}╱╲${NC} ${CYAN}░▒▓${NC} ${WH}JM SCRIPT VPN SERVER${NC} ${CYAN}░▒▓${NC} ${BLUE}╲╱${NC}"
+    echo -e " ${purple}╲╱╲╱${NC} ${CYAN}⬡ ⬡ ⬡   AUTOSCRIPT MULTIPORT FREE   ⬡ ⬡ ⬡${NC} ${purple}╲╱╲╱${NC}"
+    echo -e " ${CYAN}╰━━━━━━━╱╲━━━━━━━━━━━━━━━━━━━━╱╲━━━━━━━╯${NC}"
+}
+cyber_frame_bottom() {
+    echo -e " ${CYAN}╰━━━━━━━╲╱━━━━━━━━━━━━━━━━━━━━╲╱━━━━━━━╯${NC}"
+    echo -e " ${purple}╱╲╱╲${NC} ${BLUE}░▒▓░▒▓░▒▓${NC} ${CYAN}━━ JM SCRIPT VPN PANEL ━━${NC} ${BLUE}░▒▓░▒▓░▒▓${NC} ${purple}╱╲╱╲${NC}"
+}
 clear && clear && clear
 sleep 0.01
 clear
+cyber_frame_top
 echo -e " ${COLOR1}╭══════════════════════════════════════════════════════════╮${NC}"
 echo -e " ${COLOR1}│${NC} \E[40;1;30m       ${WH} .::::. ᴀᴜᴛᴏꜱᴄʀɪᴘᴛ ᴍᴜʟᴛɪᴘᴏʀᴛ ꜰʀᴇᴇ .::::.         ${NC} ${COLOR1}│ $NC"
 echo -e " ${COLOR1}╰══════════════════════════════════════════════════════════╯${NC}"
@@ -276,21 +287,21 @@ echo -e " ${COLOR1}╭═══════════════════�
 # Fila del menu: columna izquierda (con contador) | columna derecha. Ancho fijo => siempre alineado.
 menu_icon() {
     case "$1" in
-        01|08) printf "${CYAN}▣${NC}" ;;
-        02) printf "${BLUE}➤${NC}" ;;
-        03) printf "${CYAN}◈${NC}" ;;
-        04) printf "${ORANGE}◉${NC}" ;;
-        05) printf "${ORANGE}♜${NC}" ;;
+        01|08) printf "${WH}▣${NC}" ;;
+        02) printf "${WH}➤${NC}" ;;
+        03) printf "${WH}◈${NC}" ;;
+        04) printf "${WH}◉${NC}" ;;
+        05) printf "${WH}♜${NC}" ;;
         06) printf "${WH}♙${NC}" ;;
-        07) printf "${YELLOW}\$${NC}" ;;
-        09|10|11) printf "${YELLOW}⚙${NC}" ;;
-        12|13|24) printf "${GREEN}⟳${NC}" ;;
-        14|15|16|18) printf "${CYAN}◎${NC}" ;;
-        17|26) printf "${MAGENTA}⊗${NC}" ;;
-        25) printf "${BLUE}⇧${NC}" ;;
-        66) printf "${RED}▤${NC}" ;;
-        89) printf "${ORANGE}✎${NC}" ;;
-        *) printf "${CYAN}•${NC}" ;;
+        07) printf "${WH}\$${NC}" ;;
+        09|10|11) printf "${WH}⚙${NC}" ;;
+        12|13|24) printf "${WH}⟳${NC}" ;;
+        14|15|16|18) printf "${WH}◎${NC}" ;;
+        17|26) printf "${WH}⊗${NC}" ;;
+        25) printf "${WH}⇧${NC}" ;;
+        66) printf "${WH}▤${NC}" ;;
+        89) printf "${WH}✎${NC}" ;;
+        *) printf "${WH}•${NC}" ;;
     esac
 }
 menu_pad() {
@@ -305,17 +316,13 @@ mrow() { # $1=num izq  $2=nombre izq  $3=contador izq  $4=num der  $5=nombre der
     icon_l=$(menu_icon "$1")
     icon_r=$(menu_icon "$4")
     if [ -n "$3" ]; then
-        l=$(printf "${WH}[${COLOR1}%s${WH}]${NC} %s ${WH}%s${RED}%-4s${WH}[${COLOR1}Menu${WH}]${NC}" "$1" "$icon_l" "$2" "$3")
+        l=$(printf "${WH}[${COLOR1}%s${WH}]${NC} %s ${WH}%-15s${RED}%-4s${NC}" "$1" "$icon_l" "$2" "$3")
     else
-        l=$(printf "${WH}[${COLOR1}%s${WH}]${NC} %s ${WH}%s${WH}[${COLOR1}Menu${WH}]${NC}" "$1" "$icon_l" "$2")
+        l=$(printf "${WH}[${COLOR1}%s${WH}]${NC} %s ${WH}%-15s${NC}" "$1" "$icon_l" "$2")
     fi
-    if [ "${6:-}" = "RED" ]; then
-        r=$(printf "${WH}[${COLOR1}%s${WH}]${NC} %s ${WH}%s${WH}[${RED}■${WH}]${NC}" "$4" "$icon_r" "$5")
-    else
-        r=$(printf "${WH}[${COLOR1}%s${WH}]${NC} %s ${WH}%s${WH}[${COLOR1}Menu${WH}]${NC}" "$4" "$icon_r" "$5")
-    fi
-    l=$(menu_pad "$l" 31)
-    r=$(menu_pad "$r" 28)
+    r=$(printf "${WH}[${COLOR1}%s${WH}]${NC} %s ${WH}%-19s${NC}" "$4" "$icon_r" "$5")
+    l=$(menu_pad "$l" 30)
+    r=$(menu_pad "$r" 30)
     echo -e " ${COLOR1}│${NC} ${l}${COLOR1}│${NC} ${r}${COLOR1}│${NC}"
 }
 mrow 01 "SSH-WS"       "$total_ssh"   08 "BOT PANEL"
@@ -331,6 +338,7 @@ mrow 18 "API BACKEND"  ""             89 "EDITAR BANNER"
 mrow 24 "SERVICIOS ON" ""             25 "INSTALAR SlowDNS"
 mrow 26 "INSTALAR UDP" ""             66 "DESINTALAR SCRIPT" RED
 echo -e " ${COLOR1}╰══════════════════════════════════════════════════════════╯${NC}"
+cyber_frame_bottom
 function rules(){
 COLOR1='\033[1;94m'  
 NC='\e[0m'
