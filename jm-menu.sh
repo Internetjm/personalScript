@@ -1436,13 +1436,66 @@ function edit_banner(){
     menu
 }
 
+function jm_api_install_or_repair(){
+    local source="" candidate port
+    if [ -n "${JM_API_SOURCE:-}" ] && [ -f "$JM_API_SOURCE" ]; then
+        source="$JM_API_SOURCE"
+    else
+        for candidate in /root/jm_api.py /root/JM-SCRIPT/jm_api.py /usr/local/share/jm_api.py /usr/local/bin/jm_api.py; do
+            if [ -f "$candidate" ]; then
+                source="$candidate"
+                break
+            fi
+        done
+    fi
+    if [ -z "$source" ]; then
+        echo "No se encontró jm_api.py para instalar."
+        echo "Copia el archivo a /root/jm_api.py y vuelve a ejecutar esta opción."
+        read -r -n 1 -s -p "Presiona una tecla..."
+        return
+    fi
+
+    install -m 755 "$source" /usr/local/bin/jm_api.py
+    mkdir -p /etc/jm-api/accounts
+    if [ ! -s /etc/jm-api/api.key ]; then
+        head -c 32 /dev/urandom | base64 | tr -d '/+=\n' > /etc/jm-api/api.key
+        chmod 600 /etc/jm-api/api.key
+    fi
+    port=$(grep -oE 'JM_API_PORT=[0-9]+' /etc/systemd/system/jm-api.service 2>/dev/null | cut -d= -f2)
+    port=${port:-8085}
+    cat > /etc/systemd/system/jm-api.service <<UNIT
+[Unit]
+Description=JM API (crear y renovar cuentas 24h)
+After=network.target
+
+[Service]
+Environment=JM_API_PORT=$port
+ExecStart=/usr/bin/python3 /usr/local/bin/jm_api.py serve
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+    chmod 600 /etc/jm-api/api.key
+    echo '*/5 * * * * root /usr/bin/python3 /usr/local/bin/jm_api.py reap >/dev/null 2>&1' > /etc/cron.d/jm-api-reap
+    systemctl daemon-reload
+    systemctl enable --now jm-api
+    command -v ufw >/dev/null 2>&1 && ufw allow "$port/tcp" >/dev/null 2>&1 || true
+    echo "API instalada/reparada correctamente."
+    echo "Key: $(cat /etc/jm-api/api.key)"
+    systemctl is-active --quiet jm-api && echo "Servicio jm-api: ACTIVO" || echo "Servicio jm-api: INACTIVO"
+    read -r -n 1 -s -p "Presiona una tecla..."
+}
+
 function jm_api_menu(){
-    local api_key api_port api_url choice user response
+    local api_key api_port api_url choice user response create_user create_password duration
     api_port=$(grep -oE 'JM_API_PORT=[0-9]+' /etc/systemd/system/jm-api.service 2>/dev/null | cut -d= -f2)
     api_port=${api_port:-8085}
     api_url="http://127.0.0.1:${api_port}"
     while true; do
         clear
+        if false; then
         echo -e "${COLOR1}╭═══════════════════════════════════════════════════════════╮${NC}"
         echo -e "${COLOR1}│${NC}              ${WH}JM API - VALIDAR BACKEND${NC}              ${COLOR1}│${NC}"
         echo -e "${COLOR1}╰═══════════════════════════════════════════════════════════╯${NC}"
@@ -1457,12 +1510,44 @@ function jm_api_menu(){
         systemctl is-active --quiet jm-api && echo -e " ${WH}Servicio:${NC} ${COLOR1}ACTIVO${NC}" || echo -e " ${WH}Servicio:${NC} ${RED}INACTIVO${NC}"
         echo ""
         echo " [1] Validar instalación, servicio y key"
-        echo " [2] Probar GET /api/v1/users"
+        echo " [2] Probar POST crear/renovar usuario"
         echo " [3] Probar GET /api/v1/users/<usuario>"
         echo " [4] Probar GET /api/v1/users/<usuario>/remaining"
         echo " [5] Mostrar comandos curl para el backend"
+        echo " [6] Instalar/Reparar API"
         echo " [0] Regresar"
         read -r -p " Selecciona una opción: " choice
+        fi
+        if [ -f /etc/jm-api/api.key ]; then
+            api_key=$(cat /etc/jm-api/api.key)
+            key_status="${COLOR1}OK${NC}"
+        else
+            api_key=""
+            key_status="${RED}NO CONFIGURADA${NC}"
+        fi
+        if systemctl is-active --quiet jm-api; then
+            service_status="${COLOR1}ACTIVO${NC}"
+        else
+            service_status="${RED}INACTIVO${NC}"
+        fi
+        echo -e " ${COLOR1}╭═════════════════════════════════════════════════╮${NC}"
+        echo -e " ${COLOR1}│${NC} ${COLBG1}             ${WH}• JM API PANEL MENU •             ${NC}${COLOR1}│${NC}"
+        echo -e " ${COLOR1}╰═════════════════════════════════════════════════╯${NC}"
+        echo -e " ${COLOR1}╭═════════════════════════════════════════════════╮${NC}"
+        printf " ${COLOR1}│${NC} ${WH}KEY API      ${COLOR1}:${NC} ${WH}%-28s${COLOR1}│${NC}\n" "${api_key:-NO CONFIGURADA}"
+        printf " ${COLOR1}│${NC} ${WH}ENDPOINT     ${COLOR1}:${NC} ${WH}%-28s${COLOR1}│${NC}\n" "${api_url}"
+        printf " ${COLOR1}│${NC} ${WH}SERVICIO     ${COLOR1}:${NC} %-28b${COLOR1}│${NC}\n" "${service_status}"
+        echo -e " ${COLOR1}╰═════════════════════════════════════════════════╯${NC}"
+        echo ""
+        echo -e " ${COLOR1}╭═════════════════════════════════════════════════╮${NC}"
+        echo -e " ${COLOR1}│${NC} ${COLBG1}              ${WH}• OPCIONES API •               ${NC}${COLOR1}│${NC}"
+        echo -e " ${COLOR1}╰═════════════════════════════════════════════════╯${NC}"
+        printf " ${COLOR1}│${NC} ${WH}[${COLOR1}1${WH}]${NC} ${COLOR1}•${NC} ${WH}VALIDAR API       ${WH}[${COLOR1}4${WH}]${NC} ${COLOR1}•${NC} ${WH}TIEMPO RESTANTE${NC} ${COLOR1}│${NC}\n"
+        printf " ${COLOR1}│${NC} ${WH}[${COLOR1}2${WH}]${NC} ${COLOR1}•${NC} ${WH}CREAR/RENOVAR     ${WH}[${COLOR1}5${WH}]${NC} ${COLOR1}•${NC} ${WH}COMANDOS CURL${NC}    ${COLOR1}│${NC}\n"
+        printf " ${COLOR1}│${NC} ${WH}[${COLOR1}3${WH}]${NC} ${COLOR1}•${NC} ${WH}CONSULTAR USUARIO  ${WH}[${COLOR1}6${WH}]${NC} ${COLOR1}•${NC} ${WH}INSTALAR/REPARAR${NC} ${COLOR1}│${NC}\n"
+        printf " ${COLOR1}│${NC} ${WH}[${COLOR1}0${WH}]${NC} ${COLOR1}•${NC} ${WH}REGRESAR${NC}                                      ${COLOR1}│${NC}\n"
+        echo -e " ${COLOR1}╰═════════════════════════════════════════════════╯${NC}"
+        echo -ne " ${WH}Select menu ${COLOR1}:${NC} ${WH}"; read -r choice
         case "$choice" in
             1)
                 echo ""
@@ -1472,7 +1557,29 @@ function jm_api_menu(){
                 read -r -n 1 -s -p "Presiona una tecla..."
                 ;;
             2)
-                response=$(curl -sS --max-time 5 -H "X-API-Key: ${api_key}" "${api_url}/api/v1/users" 2>&1) || true
+                read -r -p "Usuario (3-24 caracteres): " create_user
+                read -r -s -p "Contraseña (4-32 caracteres): " create_password
+                echo ""
+                read -r -p "Duración en horas (debe ser 24): " duration
+                if ! [[ "$create_user" =~ ^[a-zA-Z][a-zA-Z0-9_-]{2,23}$ ]]; then
+                    echo "Usuario inválido."
+                    read -r -n 1 -s -p "Presiona una tecla..."
+                    continue
+                fi
+                if ! [[ "$create_password" =~ ^[A-Za-z0-9._-]{4,32}$ ]]; then
+                    echo "Contraseña inválida."
+                    read -r -n 1 -s -p "Presiona una tecla..."
+                    continue
+                fi
+                if [ "$duration" != "24" ]; then
+                    echo "La duración debe ser exactamente 24 horas."
+                    read -r -n 1 -s -p "Presiona una tecla..."
+                    continue
+                fi
+                response=$(curl -sS --max-time 10 -X POST \
+                    -H "X-API-Key: ${api_key}" -H "Content-Type: application/json" \
+                    -d "{\"username\":\"${create_user}\",\"password\":\"${create_password}\",\"duration_hours\":24}" \
+                    "${api_url}/api/v1/users" 2>&1) || true
                 echo "${response}"
                 read -r -n 1 -s -p "Presiona una tecla..."
                 ;;
@@ -1489,10 +1596,13 @@ function jm_api_menu(){
                 read -r -n 1 -s -p "Presiona una tecla..."
                 ;;
             5)
-                echo "curl -H 'X-API-Key: ${api_key}' ${api_url}/api/v1/users"
+                echo "curl -X POST -H 'X-API-Key: ${api_key}' -H 'Content-Type: application/json' -d '{\"username\":\"USUARIO\",\"password\":\"CLAVE\",\"duration_hours\":24}' ${api_url}/api/v1/users"
                 echo "curl -H 'X-API-Key: ${api_key}' ${api_url}/api/v1/users/USUARIO"
                 echo "curl -H 'X-API-Key: ${api_key}' ${api_url}/api/v1/users/USUARIO/remaining"
                 read -r -n 1 -s -p "Presiona una tecla..."
+                ;;
+            6)
+                jm_api_install_or_repair
                 ;;
             0) menu; return ;;
             *) echo "Opción inválida"; sleep 1 ;;

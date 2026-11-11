@@ -10,7 +10,8 @@ Debe correr como root en el VPS donde esta instalado JM SCRIPT.
   python3 jm_api.py delete <usuario>
   python3 jm_api.py reap             # borra las cuentas vencidas
 
-  POST /api/v1/users/<usuario>       # crea o renueva tras 20 horas
+  POST /api/v1/users                 # crea o renueva tras 20 horas
+  GET  /api/v1/users/<usuario>         # detalle de un usuario
   GET  /api/v1/users/<usuario>/remaining # solo segundos restantes
 """
 import base64, hmac, json, os, re, secrets, subprocess, sys, threading, time, uuid as uuidlib
@@ -460,15 +461,12 @@ class H(BaseHTTPRequestHandler):
         try:
             if path == "/api/v1/users" and method == "POST":
                 b = self.body()
+                duration = int(b.get("duration_hours", HOURS))
+                if duration != HOURS:
+                    raise ValueError("la duracion debe ser exactamente %d horas" % HOURS)
                 with LOCK:
                     res = create_account(b.get("username"), b.get("password"), int(b.get("ip_limit", 1)))
                 return self.send(201, res)
-            if path == "/api/v1/users" and method == "GET":
-                d, out = P("/etc/jm-api/accounts"), []
-                for fn in sorted(os.listdir(d)) if os.path.isdir(d) else []:
-                    r = json.load(open(os.path.join(d, fn)))
-                    out.append({"username": r["username"], "expires_at": iso(r["expires_at"])})
-                return self.send(200, {"ok": True, "users": out})
             m = re.match(r"^/api/v1/users/([^/]+)/remaining$", path)
             if m and USER_RE.match(m.group(1)) and method == "GET":
                 rec = json.loads(rd(acct_file(m.group(1))) or "null")
