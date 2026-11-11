@@ -21,7 +21,8 @@ ACME="/root/.acme.sh/acme.sh"
 # Servicios que pueden ocupar el puerto 80 y hay que parar un momento para emitir el certificado
 PORT80_UNITS="nginx haproxy ws ws-stunnel ws-dropbear ws-ovpn sshws jm-proxy apache2 lighttpd caddy"
 
-C1=$'\033[1;94m'; WH=$'\033[1;37m'; RD=$'\033[1;31m'; GN=$'\033[1;32m'; YL=$'\033[1;33m'; NC=$'\033[0m'
+C1=$'\033[1;94m'; WH=$'\033[1;37m'; RD=$'\033[1;31m'; GN=$'\033[1;32m'; YL=$'\033[1;33m'; CY=$'\033[1;36m'; NC=$'\033[0m'
+BGC=$'\033[48;5;33m'
 
 DOMAIN=""
 TLS_MODE="acme"     # acme | selfsigned
@@ -35,7 +36,7 @@ step() { echo -e "\n${C1}══ ${WH}$*${C1} ══${NC}"; }
 
 box() {
     echo -e "${C1}╭══════════════════════════════════════════════════╮${NC}"
-    printf "${C1}│${WH} %-48s ${C1}│${NC}\n" "$1"
+    printf "${C1}│${BGC}${WH} %-48s ${NC}${C1}│${NC}\n" "•  $1  •"
     echo -e "${C1}╰══════════════════════════════════════════════════╯${NC}"
 }
 
@@ -739,16 +740,13 @@ while true; do
         echo -e " ${WH}Estado : ${RD}INACTIVO${NC}   ${WH}Dominio : ${GN}$(cat "${XRAY_DIR}/domain" 2>/dev/null || echo -)${NC}"
     fi
     echo
-    echo -e " ${C1}[1]${NC} Instalar / reparar V2Ray (pide dominio)"
-    echo -e " ${C1}[2]${NC} Cambiar dominio V2Ray + certificado"
-    echo -e " ${C1}[3]${NC} Activar"
-    echo -e " ${C1}[4]${NC} Desactivar"
-    echo -e " ${C1}[5]${NC} Reiniciar"
-    echo -e " ${C1}[6]${NC} Ver estado y validar configuración"
-    echo -e " ${C1}[7]${NC} Ver logs"
-    echo -e " ${C1}[8]${NC} Ver puertos"
-    echo -e " ${C1}[9]${NC} Desinstalar"
-    echo -e " ${C1}[0]${NC} Regresar"
+    echo -e "${C1}╭══════════════════ ${WH}OPCIONES XRAY${C1} ═══════════════════╮${NC}"
+    echo -e "${C1}│${NC} ${CY}[1]${NC} Instalar / reparar V2Ray       ${CY}[6]${NC} Ver estado/config ${C1}│${NC}"
+    echo -e "${C1}│${NC} ${CY}[2]${NC} Cambiar dominio + certificado  ${CY}[7]${NC} Ver logs         ${C1}│${NC}"
+    echo -e "${C1}│${NC} ${CY}[3]${NC} Activar                         ${CY}[8]${NC} Ver puertos      ${C1}│${NC}"
+    echo -e "${C1}│${NC} ${CY}[4]${NC} Desactivar                      ${CY}[9]${NC} Desinstalar      ${C1}│${NC}"
+    echo -e "${C1}│${NC} ${CY}[5]${NC} Reiniciar                       ${CY}[0]${NC} Regresar         ${C1}│${NC}"
+    echo -e "${C1}╰══════════════════════════════════════════════════════════╯${NC}"
     echo
     read -r -p " Seleccione una opción: " option
     case "${option}" in

@@ -8,6 +8,13 @@ BHTTP_SERVICE="bhttp.service"
 BHTTP_CONFIG="/etc/bhttp-panel.conf"
 BHTTP_PORT="8888"
 BHTTP_SSH_PORT="22"
+C1=$'\033[1;94m'; CY=$'\033[1;36m'; WH=$'\033[1;37m'; GN=$'\033[1;32m'; RD=$'\033[1;31m'; NC=$'\033[0m'
+
+bhttp_title() {
+    echo -e "${C1}╭══════════════════════════════════════════════════════════╮${NC}"
+    printf "${C1}│${NC}${CY} %-54s ${C1}│${NC}\n" "•  BHTTP SERVER  •"
+    echo -e "${C1}╰══════════════════════════════════════════════════════════╯${NC}"
+}
 
 detect_ssh_port() {
     if ! command -v ss >/dev/null 2>&1; then
@@ -137,26 +144,22 @@ uninstall_bhttp() {
 load_config
 while true; do
     clear
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "             BHTTP SERVER"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    bhttp_title
     if systemctl is-active --quiet "${BHTTP_SERVICE}"; then
-        echo "Estado: ACTIVO"
+        echo -e " ${WH}Estado : ${GN}● ACTIVO${NC}"
     else
-        echo "Estado: INACTIVO"
+        echo -e " ${WH}Estado : ${RD}● INACTIVO${NC}"
     fi
-    echo "Puerto: ${BHTTP_PORT} | SSH backend: ${BHTTP_SSH_PORT}"
+    echo -e " ${WH}Puerto : ${CY}${BHTTP_PORT}${NC}  ${WH}| SSH backend : ${CY}${BHTTP_SSH_PORT}${NC}"
     echo
-    echo "[1] Instalar / actualizar y activar"
-    echo "[2] Activar"
-    echo "[3] Desactivar"
-    echo "[4] Reiniciar"
-    echo "[5] Ver estado y logs"
-    echo "[6] Diagnóstico BHTTP"
-    echo "[7] Crear usuario SSH"
-    echo "[8] Desinstalar"
-    echo "[ENTER] Regresar"
-    read -r -p "Seleccione una opción: " option
+    echo -e "${C1}╭═══════════════════ ${WH}OPCIONES BHTTP${C1} ═══════════════════╮${NC}"
+    echo -e "${C1}│${NC} ${CY}[1]${NC} Instalar / actualizar y activar   ${CY}[5]${NC} Ver estado/logs ${C1}│${NC}"
+    echo -e "${C1}│${NC} ${CY}[2]${NC} Activar                           ${CY}[6]${NC} Diagnóstico    ${C1}│${NC}"
+    echo -e "${C1}│${NC} ${CY}[3]${NC} Desactivar                        ${CY}[7]${NC} Crear usuario  ${C1}│${NC}"
+    echo -e "${C1}│${NC} ${CY}[4]${NC} Reiniciar                         ${CY}[8]${NC} Desinstalar    ${C1}│${NC}"
+    echo -e "${C1}│${NC} ${CY}[ENTER]${NC} Regresar                                         ${C1}│${NC}"
+    echo -e "${C1}╰══════════════════════════════════════════════════════════╯${NC}"
+    read -r -p " Seleccione una opción: " option
     case "${option}" in
         1) install_bhttp; pause_menu ;;
         2) systemctl enable --now "${BHTTP_SERVICE}"; echo "BHTTP activado."; pause_menu ;;

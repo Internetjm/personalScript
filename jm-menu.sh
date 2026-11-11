@@ -136,8 +136,11 @@ srow() { echo -e " ${COLOR1}│${NC} $(sitem "$1" "$2" "$3" 11)${COLOR1}│${NC}
 
 show_ports() {
     clear
-    echo -e "${COLOR1}Puertos actualmente escuchando${NC}"
-    echo -e "${WH}--------------------------------${NC}"
+    echo -e "${COLOR1}╭══════════════════════════════════════════════════════════╮${NC}"
+    echo -e "${COLOR1}│${NC}${WH}              • PUERTOS DEL SERVIDOR •                 ${COLOR1}│${NC}"
+    echo -e "${COLOR1}╰══════════════════════════════════════════════════════════╯${NC}"
+    echo -e " ${COLOR1}Puertos actualmente escuchando${NC}"
+    echo -e " ${WH}────────────────────────────────────────────────────────${NC}"
     if command -v ss >/dev/null 2>&1; then
         ss -H -lntup 2>/dev/null | awk '{print $1, $5, $7}' | sort -k2n
     elif command -v netstat >/dev/null 2>&1; then
@@ -146,12 +149,13 @@ show_ports() {
         echo "No se encontró ss ni netstat."
     fi
     echo
-    echo -e "${WH}Puertos previstos por el panel:${NC}"
+    echo -e "${COLOR1}╭══════════════════ ${WH}PUERTOS PREVISTOS${COLOR1} ══════════════════╮${NC}"
     echo "SSH: 22 (el listado anterior muestra el valor real)"
     echo "Dropbear: 109, 110, 143"
     echo "WebSocket: 80, 8080, 8088, 8280, 8880, 2052, 2082, 2086, 2095"
     echo "TLS: 443, 8443, 2053, 2087, 2096"
     echo "HCR: 8880 | BHTTP: 8888"
+    echo -e "${COLOR1}╰══════════════════════════════════════════════════════════╯${NC}"
     read -n 1 -s -r -p "Presione cualquier tecla para regresar al menú"
     menu
 }
@@ -279,12 +283,13 @@ menu_icon() {
         05) printf "${WH}♜${NC}" ;;
         06) printf "${WH}♙${NC}" ;;
         07) printf "${WH}\$${NC}" ;;
-        09|10|11) printf "${WH}⚙${NC}" ;;
+        09|10) printf "${WH}⚙${NC}" ;;
         12|13|24) printf "${WH}⟳${NC}" ;;
         14|15|16|18) printf "${WH}◎${NC}" ;;
         17|26) printf "${WH}⊗${NC}" ;;
         25) printf "${WH}⇧${NC}" ;;
         66) printf "${WH}▤${NC}" ;;
+        00) printf "${WH}↩${NC}" ;;
         89) printf "${WH}✎${NC}" ;;
         *) printf "${WH}•${NC}" ;;
     esac
@@ -305,7 +310,11 @@ mrow() { # $1=num izq  $2=nombre izq  $3=contador izq  $4=num der  $5=nombre der
     else
         l=$(printf "${WH}[${COLOR1}%s${WH}]${NC} %s ${WH}%-15s${NC}" "$1" "$icon_l" "$2")
     fi
-    r=$(printf "${WH}[${COLOR1}%s${WH}]${NC} %s ${WH}%-19s${NC}" "$4" "$icon_r" "$5")
+    if [ -n "$4" ]; then
+        r=$(printf "${WH}[${COLOR1}%s${WH}]${NC} %s ${WH}%-19s${NC}" "$4" "$icon_r" "$5")
+    else
+        r=""
+    fi
     l=$(menu_pad "$l" 30)
     r=$(menu_pad "$r" 30)
     echo -e " ${COLOR1}│${NC} ${l}${COLOR1}│${NC} ${r}${COLOR1}│${NC}"
@@ -313,15 +322,15 @@ mrow() { # $1=num izq  $2=nombre izq  $3=contador izq  $4=num der  $5=nombre der
 mrow 01 "SSH-WS"       "$total_ssh"   08 "BOT PANEL"
 mrow 02 "VMESS"        "$vmess"       09 "BOT NOTIFICAC."
 mrow 03 "VLESS"        "$vless"       10 "CAMBIAR DOMINIO"
-mrow 04 "SHADO-SOCK"   "$shadow"      89 "EDITAR BANER"
-mrow 05 "TROJAN"       "$trtls"       11 "OTRAS OPCIONES"
-mrow 06 "MODO TOKEN"   "$total_token" 12 "REINICIAR VPS"
-mrow 07 "BORRAR EXP"   ""             13 "RESET SERVICIOS"
-mrow 14 "HCR SERVER"   ""             16 "VER PUERTOS"
-mrow 15 "BHTTP SERVER" ""             17 "XRAY CORE"
-mrow 18 "API BACKEND"  ""             89 "EDITAR BANNER"
-mrow 24 "SERVICIOS ON" ""             25 "INSTALAR SlowDNS"
-mrow 26 "INSTALAR UDP" ""             66 "DESINTALAR SCRIPT" RED
+mrow 04 "SHADO-SOCK"   "$shadow"      00 "REGRESAR"
+mrow 05 "TROJAN"       "$trtls"       12 "REINICIAR VPS"
+mrow 06 "MODO TOKEN"   "$total_token" 13 "RESET SERVICIOS"
+mrow 07 "BORRAR EXP"   ""             16 "VER PUERTOS"
+mrow 14 "HCR SERVER"   ""             17 "XRAY CORE"
+mrow 15 "BHTTP SERVER" ""             89 "EDITAR BANNER"
+mrow 18 "API BACKEND"  ""             25 "INSTALAR SlowDNS"
+mrow 24 "SERVICIOS ON" ""             66 "DESINTALAR SCRIPT"
+mrow 26 "INSTALAR UDP" ""             "" ""
 echo -e " ${COLOR1}╰══════════════════════════════════════════════════════════╯${NC}"
 function rules(){
 COLOR1='\033[1;94m'  
@@ -1695,7 +1704,6 @@ case $opt in
 09 | 9) clear ; m-bot2 ;;
 # Legacy updater reference removed.
 10 | 10) clear ; newdom ;;
-11 | 11) clear ; m-system ;;
 #12 | 12) clear ; m-backup;;
 12 | 12) clear ; reboot ;;
 #15 | 15) clear ; key ;;
