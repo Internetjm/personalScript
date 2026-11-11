@@ -108,7 +108,11 @@ Para actualizar los componentes descargados por el menú, utiliza la opción de 
 
 ```bash
 wget -O /root/jm-script.sh https://raw.githubusercontent.com/Internetjm/personalScript/main/jm-script.sh
+```
+```bash
 chmod +x /root/jm-script.sh
+```
+```bash
 bash /root/jm-script.sh
 ```
 

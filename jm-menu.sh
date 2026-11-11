@@ -12,6 +12,11 @@ export COLBG1="$(cat /etc/rmbl/theme/$colornow | grep -w "BG" | cut -d: -f2|sed 
 WH='\033[1;37m'
 yl='\033[33m';
 purple="\033[1;95m"
+CYAN='\033[1;36m'
+BLUE='\033[1;34m'
+ORANGE='\033[38;5;208m'
+MAGENTA='\033[1;35m'
+YELLOW='\033[1;33m'
 tram=$( free -m | awk 'NR==2 {print $2}' )
 uram=$( free -m | awk 'NR==2 {print $3}' )
 #ISP=$(cat /etc/xray/isp)
@@ -269,18 +274,48 @@ printf "                \033[1;37m%-16s ${COLOR1}%-4s${NC} ${WH}%-5s\e[0m\n" " T
 echo -e "        ${COLOR1}╰════════════════════════════════════════════╯${NC}"
 echo -e " ${COLOR1}╭═════════════════════ • ${WH}LISTA MENU${NC}${COLOR1} • ═════════════════════╮${NC}"
 # Fila del menu: columna izquierda (con contador) | columna derecha. Ancho fijo => siempre alineado.
+menu_icon() {
+    case "$1" in
+        01|08) printf "${CYAN}▣${NC}" ;;
+        02) printf "${BLUE}➤${NC}" ;;
+        03) printf "${CYAN}◈${NC}" ;;
+        04) printf "${ORANGE}◉${NC}" ;;
+        05) printf "${ORANGE}♜${NC}" ;;
+        06) printf "${WH}♙${NC}" ;;
+        07) printf "${YELLOW}\$${NC}" ;;
+        09|10|11) printf "${YELLOW}⚙${NC}" ;;
+        12|13|24) printf "${GREEN}⟳${NC}" ;;
+        14|15|16|18) printf "${CYAN}◎${NC}" ;;
+        17|26) printf "${MAGENTA}⊗${NC}" ;;
+        25) printf "${BLUE}⇧${NC}" ;;
+        66) printf "${RED}▤${NC}" ;;
+        89) printf "${ORANGE}✎${NC}" ;;
+        *) printf "${CYAN}•${NC}" ;;
+    esac
+}
+menu_pad() {
+    local text="$1" total="$2" visible spaces
+    visible=$(printf '%s' "$text" | sed $'s/\033\\[[0-9;]*[[:alpha:]]//g' | awk '{print length($0)}')
+    spaces=$((total - visible))
+    [ "$spaces" -lt 0 ] && spaces=0
+    printf '%s%*s' "$text" "$spaces" ''
+}
 mrow() { # $1=num izq  $2=nombre izq  $3=contador izq  $4=num der  $5=nombre der  $6=RED para el boton rojo
-    local l r
+    local l r icon_l icon_r
+    icon_l=$(menu_icon "$1")
+    icon_r=$(menu_icon "$4")
     if [ -n "$3" ]; then
-        l=$(printf "${WH}[${COLOR1}%s${WH}]${NC} ${WH}%-11s${RED}%-4s${WH}[${COLOR1}Menu${WH}]${NC} " "$1" "$2" "$3")
+        l=$(printf "${WH}[${COLOR1}%s${WH}]${NC} %s ${WH}%s${RED}%-4s${WH}[${COLOR1}Menu${WH}]${NC}" "$1" "$icon_l" "$2" "$3")
     else
-        l=$(printf "${WH}[${COLOR1}%s${WH}]${NC} ${WH}%-15s${WH}[${COLOR1}Menu${WH}]${NC} " "$1" "$2")
+        l=$(printf "${WH}[${COLOR1}%s${WH}]${NC} %s ${WH}%s${WH}[${COLOR1}Menu${WH}]${NC}" "$1" "$icon_l" "$2")
     fi
     if [ "${6:-}" = "RED" ]; then
-        r=$(printf "${WH}[${COLOR1}%s${WH}]${NC} ${WH}%-17s ${WH}[${COLOR1}🔴${WH}]${NC} " "$4" "$5")
+        r=$(printf "${WH}[${COLOR1}%s${WH}]${NC} %s ${WH}%s${WH}[${RED}■${WH}]${NC}" "$4" "$icon_r" "$5")
     else
-        r=$(printf "${WH}[${COLOR1}%s${WH}]${NC} ${WH}%-17s${WH}[${COLOR1}Menu${WH}]${NC}" "$4" "$5")
+        r=$(printf "${WH}[${COLOR1}%s${WH}]${NC} %s ${WH}%s${WH}[${COLOR1}Menu${WH}]${NC}" "$4" "$icon_r" "$5")
     fi
+    l=$(menu_pad "$l" 31)
+    r=$(menu_pad "$r" 28)
     echo -e " ${COLOR1}│${NC} ${l}${COLOR1}│${NC} ${r}${COLOR1}│${NC}"
 }
 mrow 01 "SSH-WS"       "$total_ssh"   08 "BOT PANEL"
