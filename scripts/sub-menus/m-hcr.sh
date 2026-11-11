@@ -5,11 +5,11 @@ HCR_HOME="/opt/hcr-server"
 HCR_BUNDLE="/usr/local/lib/hcr-server"
 HCR_PORT="8880"
 HCR_TRANSPORT="plain"
-C1=$'\033[1;94m'; CY=$'\033[1;36m'; WH=$'\033[1;37m'; GN=$'\033[1;32m'; RD=$'\033[1;31m'; YL=$'\033[1;33m'; NC=$'\033[0m'
+C1=$'\033[1;94m'; CY=$'\033[1;36m'; WH=$'\033[1;37m'; GN=$'\033[1;32m'; RD=$'\033[1;31m'; YL=$'\033[1;33m'; BGC=$'\033[48;5;33m'; NC=$'\033[0m'
 
 hcr_title() {
     echo -e "${C1}╭══════════════════════════════════════════════════════════╮${NC}"
-    printf "${C1}│${NC}${CY} %-54s ${C1}│${NC}\n" "•  HCR SERVER  •"
+    printf "${C1}│${BGC}${WH}%*s${NC}${C1}│${NC}\n" 56 "                 •  HCR SERVER  •"
     echo -e "${C1}╰══════════════════════════════════════════════════════════╯${NC}"
 }
 
@@ -67,14 +67,18 @@ uninstall_hcr() {
 while true; do
     clear
     hcr_title
+    echo -e "${C1}╭══════════════════════════════════════════════════════════╮${NC}"
     if systemctl is-active --quiet "${HCR_SERVICE}"; then
         echo -e " ${WH}Estado : ${GN}● ACTIVO${NC}"
     else
         echo -e " ${WH}Estado : ${RD}● INACTIVO${NC}"
     fi
     echo -e " ${WH}Puerto : ${CY}${HCR_PORT}${NC}  ${WH}| Transporte : ${CY}${HCR_TRANSPORT}${NC}"
+    echo -e "${C1}╰══════════════════════════════════════════════════════════╯${NC}"
     echo
-    echo -e "${C1}╭════════════════════ ${WH}OPCIONES HCR${C1} ════════════════════╮${NC}"
+    echo -e "${C1}╭══════════════════════════════════════════════════════════╮${NC}"
+    printf "${C1}│${BGC}${WH}%*s${NC}${C1}│${NC}\n" 56 "                  •  OPCIONES HCR  •"
+    echo -e "${C1}╰══════════════════════════════════════════════════════════╯${NC}"
     echo -e "${C1}│${NC} ${CY}[1]${NC} Instalar / actualizar y activar   ${CY}[4]${NC} Reiniciar       ${C1}│${NC}"
     echo -e "${C1}│${NC} ${CY}[2]${NC} Activar                           ${CY}[5]${NC} Ver estado/logs ${C1}│${NC}"
     echo -e "${C1}│${NC} ${CY}[3]${NC} Desactivar                        ${CY}[6]${NC} Desinstalar    ${C1}│${NC}"

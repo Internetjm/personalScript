@@ -740,7 +740,8 @@ while true; do
         echo -e " ${WH}Estado : ${RD}INACTIVO${NC}   ${WH}Dominio : ${GN}$(cat "${XRAY_DIR}/domain" 2>/dev/null || echo -)${NC}"
     fi
     echo
-    echo -e "${C1}╭══════════════════ ${WH}OPCIONES XRAY${C1} ═══════════════════╮${NC}"
+    echo -e "${C1}╭══════════════════════════════════════════════════════════╮${NC}"
+    printf "${C1}│${BGC}${WH}%*s${NC}${C1}│${NC}\n" 56 "                  •  OPCIONES XRAY  •"
     echo -e "${C1}│${NC} ${CY}[1]${NC} Instalar / reparar V2Ray       ${CY}[6]${NC} Ver estado/config ${C1}│${NC}"
     echo -e "${C1}│${NC} ${CY}[2]${NC} Cambiar dominio + certificado  ${CY}[7]${NC} Ver logs         ${C1}│${NC}"
     echo -e "${C1}│${NC} ${CY}[3]${NC} Activar                         ${CY}[8]${NC} Ver puertos      ${C1}│${NC}"

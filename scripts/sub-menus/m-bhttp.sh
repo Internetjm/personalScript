@@ -8,11 +8,11 @@ BHTTP_SERVICE="bhttp.service"
 BHTTP_CONFIG="/etc/bhttp-panel.conf"
 BHTTP_PORT="8888"
 BHTTP_SSH_PORT="22"
-C1=$'\033[1;94m'; CY=$'\033[1;36m'; WH=$'\033[1;37m'; GN=$'\033[1;32m'; RD=$'\033[1;31m'; NC=$'\033[0m'
+C1=$'\033[1;94m'; CY=$'\033[1;36m'; WH=$'\033[1;37m'; GN=$'\033[1;32m'; RD=$'\033[1;31m'; BGC=$'\033[48;5;33m'; NC=$'\033[0m'
 
 bhttp_title() {
     echo -e "${C1}╭══════════════════════════════════════════════════════════╮${NC}"
-    printf "${C1}│${NC}${CY} %-54s ${C1}│${NC}\n" "•  BHTTP SERVER  •"
+    printf "${C1}│${BGC}${WH}%*s${NC}${C1}│${NC}\n" 56 "                •  BHTTP SERVER  •"
     echo -e "${C1}╰══════════════════════════════════════════════════════════╯${NC}"
 }
 
@@ -145,14 +145,18 @@ load_config
 while true; do
     clear
     bhttp_title
+    echo -e "${C1}╭══════════════════════════════════════════════════════════╮${NC}"
     if systemctl is-active --quiet "${BHTTP_SERVICE}"; then
         echo -e " ${WH}Estado : ${GN}● ACTIVO${NC}"
     else
         echo -e " ${WH}Estado : ${RD}● INACTIVO${NC}"
     fi
     echo -e " ${WH}Puerto : ${CY}${BHTTP_PORT}${NC}  ${WH}| SSH backend : ${CY}${BHTTP_SSH_PORT}${NC}"
+    echo -e "${C1}╰══════════════════════════════════════════════════════════╯${NC}"
     echo
-    echo -e "${C1}╭═══════════════════ ${WH}OPCIONES BHTTP${C1} ═══════════════════╮${NC}"
+    echo -e "${C1}╭══════════════════════════════════════════════════════════╮${NC}"
+    printf "${C1}│${BGC}${WH}%*s${NC}${C1}│${NC}\n" 56 "                •  OPCIONES BHTTP  •"
+    echo -e "${C1}╰══════════════════════════════════════════════════════════╯${NC}"
     echo -e "${C1}│${NC} ${CY}[1]${NC} Instalar / actualizar y activar   ${CY}[5]${NC} Ver estado/logs ${C1}│${NC}"
     echo -e "${C1}│${NC} ${CY}[2]${NC} Activar                           ${CY}[6]${NC} Diagnóstico    ${C1}│${NC}"
     echo -e "${C1}│${NC} ${CY}[3]${NC} Desactivar                        ${CY}[7]${NC} Crear usuario  ${C1}│${NC}"

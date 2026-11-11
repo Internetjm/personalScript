@@ -135,9 +135,10 @@ sitem() {
 srow() { echo -e " ${COLOR1}│${NC} $(sitem "$1" "$2" "$3" 11)${COLOR1}│${NC} $(sitem "$4" "$5" "$6" 12)${COLOR1}│${NC}"; }
 
 show_ports() {
+    local port_bg=$'\033[48;5;33m'
     clear
     echo -e "${COLOR1}╭══════════════════════════════════════════════════════════╮${NC}"
-    echo -e "${COLOR1}│${NC}${WH}              • PUERTOS DEL SERVIDOR •                 ${COLOR1}│${NC}"
+    printf "${COLOR1}│${port_bg}${WH}%*s${NC}${COLOR1}│${NC}\n" 56 "              • PUERTOS DEL SERVIDOR •"
     echo -e "${COLOR1}╰══════════════════════════════════════════════════════════╯${NC}"
     echo -e " ${COLOR1}Puertos actualmente escuchando${NC}"
     echo -e " ${WH}────────────────────────────────────────────────────────${NC}"
@@ -149,7 +150,8 @@ show_ports() {
         echo "No se encontró ss ni netstat."
     fi
     echo
-    echo -e "${COLOR1}╭══════════════════ ${WH}PUERTOS PREVISTOS${COLOR1} ══════════════════╮${NC}"
+    echo -e "${COLOR1}╭══════════════════════════════════════════════════════════╮${NC}"
+    printf "${COLOR1}│${port_bg}${WH}%*s${NC}${COLOR1}│${NC}\n" 56 "                • PUERTOS PREVISTOS •"
     echo "SSH: 22 (el listado anterior muestra el valor real)"
     echo "Dropbear: 109, 110, 143"
     echo "WebSocket: 80, 8080, 8088, 8280, 8880, 2052, 2082, 2086, 2095"
@@ -242,7 +244,7 @@ clear && clear && clear
 sleep 0.01
 clear
 echo -e " ${COLOR1}╭══════════════════════════════════════════════════════════╮${NC}"
-echo -e " ${COLOR1}│${NC} \E[40;1;30m       ${WH} .::::. ᴀᴜᴛᴏꜱᴄʀɪᴘᴛ ᴍᴜʟᴛɪᴘᴏʀᴛ ꜰʀᴇᴇ .::::.         ${NC} ${COLOR1}│ $NC"
+echo -e " ${COLOR1}│${NC} \E[40;1;30m              ${WH}•  SCRIPT JM VPN  •${NC}              ${COLOR1}│ $NC"
 echo -e " ${COLOR1}╰══════════════════════════════════════════════════════════╯${NC}"
 echo -e " ${COLOR1}╭══════════════════════════════════════════════════════════╮${NC}"
 echo -e " ${COLOR1}│$NC${WH} ❈ OS            ${COLOR1}: ${WH}$MODEL2 ❈ RAM: $tram / $uram MB${NC}"
@@ -276,21 +278,22 @@ echo -e " ${COLOR1}╭═══════════════════�
 # Fila del menu: columna izquierda (con contador) | columna derecha. Ancho fijo => siempre alineado.
 menu_icon() {
     case "$1" in
-        01|08) printf "${WH}▣${NC}" ;;
+        01) printf "${WH}▣${NC}" ;;
         02) printf "${WH}➤${NC}" ;;
         03) printf "${WH}◈${NC}" ;;
         04) printf "${WH}◉${NC}" ;;
         05) printf "${WH}♜${NC}" ;;
         06) printf "${WH}♙${NC}" ;;
         07) printf "${WH}\$${NC}" ;;
-        09|10) printf "${WH}⚙${NC}" ;;
-        12|13|24) printf "${WH}⟳${NC}" ;;
-        14|15|16|18) printf "${WH}◎${NC}" ;;
-        17|26) printf "${WH}⊗${NC}" ;;
-        25) printf "${WH}⇧${NC}" ;;
-        66) printf "${WH}▤${NC}" ;;
-        00) printf "${WH}↩${NC}" ;;
-        89) printf "${WH}✎${NC}" ;;
+        08|09|10) printf "${WH}◎${NC}" ;;
+        11|17|18) printf "${WH}⟳${NC}" ;;
+        12|20) printf "${WH}⊗${NC}" ;;
+        13) printf "${WH}▣${NC}" ;;
+        14|15) printf "${WH}⚙${NC}" ;;
+        16) printf "${WH}✎${NC}" ;;
+        19) printf "${WH}◎${NC}" ;;
+        21) printf "${WH}⇧${NC}" ;;
+        22) printf "${WH}▤${NC}" ;;
         *) printf "${WH}•${NC}" ;;
     esac
 }
@@ -315,22 +318,21 @@ mrow() { # $1=num izq  $2=nombre izq  $3=contador izq  $4=num der  $5=nombre der
     else
         r=""
     fi
-    l=$(menu_pad "$l" 30)
-    r=$(menu_pad "$r" 30)
+    l=$(menu_pad "$l" 27)
+    r=$(menu_pad "$r" 27)
     echo -e " ${COLOR1}│${NC} ${l}${COLOR1}│${NC} ${r}${COLOR1}│${NC}"
 }
-mrow 01 "SSH-WS"       "$total_ssh"   08 "BOT PANEL"
-mrow 02 "VMESS"        "$vmess"       09 "BOT NOTIFICAC."
-mrow 03 "VLESS"        "$vless"       10 "CAMBIAR DOMINIO"
-mrow 04 "SHADO-SOCK"   "$shadow"      00 "REGRESAR"
-mrow 05 "TROJAN"       "$trtls"       12 "REINICIAR VPS"
-mrow 06 "MODO TOKEN"   "$total_token" 13 "RESET SERVICIOS"
-mrow 07 "BORRAR EXP"   ""             16 "VER PUERTOS"
-mrow 14 "HCR SERVER"   ""             17 "XRAY CORE"
-mrow 15 "BHTTP SERVER" ""             89 "EDITAR BANNER"
-mrow 18 "API BACKEND"  ""             25 "INSTALAR SlowDNS"
-mrow 24 "SERVICIOS ON" ""             66 "DESINTALAR SCRIPT"
-mrow 26 "INSTALAR UDP" ""             "" ""
+mrow 01 "SSH-WS"       "$total_ssh"   12 "INSTALAR UDP"
+mrow 02 "VMESS"        "$vmess"       13 "BOT PANEL"
+mrow 03 "VLESS"        "$vless"       14 "BOT NOTIFICAC."
+mrow 04 "SHADO-SOCK"   "$shadow"      15 "CAMBIAR DOMINIO"
+mrow 05 "TROJAN"       "$trtls"       16 "EDITAR BANNER"
+mrow 06 "MODO TOKEN"   "$total_token" 17 "REINICIAR VPS"
+mrow 07 "BORRAR EXP"   ""             18 "RESET SERVICIOS"
+mrow 08 "HCR SERVER"   ""             19 "VER PUERTOS"
+mrow 09 "BHTTP SERVER" ""             20 "XRAY CORE"
+mrow 10 "API BACKEND"  ""             21 "INSTALAR SlowDNS"
+mrow 11 "SERVICIOS ON" ""             22 "DESINTALAR SCRIPT"
 echo -e " ${COLOR1}╰══════════════════════════════════════════════════════════╯${NC}"
 function rules(){
 COLOR1='\033[1;94m'  
@@ -1495,7 +1497,14 @@ function jm_api_install_or_repair(){
     # El menú suele instalarse solo. En ese caso obtiene el backend desde
     # el mismo repositorio antes de mostrar el error de archivo faltante.
     if [ -z "$source" ] && { command -v curl >/dev/null 2>&1 || command -v wget >/dev/null 2>&1; }; then
-        download_tmp=$(mktemp /tmp/jm_api.XXXXXX.py)
+        local temp_dir="${TMPDIR:-/var/tmp}"
+        mkdir -p "$temp_dir" 2>/dev/null
+        download_tmp=$(mktemp "${temp_dir}/jm_api.XXXXXX.py" 2>/dev/null) || download_tmp=""
+        if [ -z "$download_tmp" ]; then
+            echo "No se pudo crear un archivo temporal para descargar jm_api.py."
+            read -r -n 1 -s -p "Presiona una tecla..."
+            return
+        fi
         if command -v curl >/dev/null 2>&1; then
             curl -fsSL "${JM_API_URL:-https://raw.githubusercontent.com/Internetjm/personalScript/main/jm_api.py}" -o "$download_tmp" 2>/dev/null
         else
@@ -1700,30 +1709,21 @@ case $opt in
 #06 | 6) clear ; m-trgo ;;
 06 | 6) clear ; m-token ;;
 07 | 7) clear ; xp ;;
-08 | 8) clear ; m-bot  ;;
-09 | 9) clear ; m-bot2 ;;
-# Legacy updater reference removed.
-10 | 10) clear ; newdom ;;
-#12 | 12) clear ; m-backup;;
-12 | 12) clear ; reboot ;;
-#15 | 15) clear ; key ;;
-13 | 13) clear ; restartservice ;;
-14 | 14) clear ; m-hcr ;;
-15 | 15) clear ; m-bhttp ;;
-16 | 16) clear ; show_ports ;;
-17 | 17) clear ; m-xray ;;
-18 | 18) clear ; jm_api_menu ;;
-20 | 20) clear ; setupslow ;;
-#21 | 21) clear ; $ressee2 ;;
-#20 | 22) clear ; $ressee3 ;;
-24 | 24) clear ; running;;
-25 | 25) clear ; setupslow ;;
-26 | 26) clear ; setupudp ;;
-89 | 89) clear ; edit_banner ;;
-#88 | 88) clear ; m-noobz ;;
-#77 | 77) clear ; newx ;;
-66 | 66) clear ; dess ;;
-#100) clear ; $up2u ;;
-00 | 0) clear ; menu ;;
+08 | 8) clear ; m-hcr ;;
+09 | 9) clear ; m-bhttp ;;
+10 | 10) clear ; jm_api_menu ;;
+11 | 11) clear ; running ;;
+12 | 12) clear ; setupudp ;;
+13 | 13) clear ; m-bot ;;
+14 | 14) clear ; m-bot2 ;;
+15 | 15) clear ; newdom ;;
+16 | 16) clear ; edit_banner ;;
+17 | 17) clear ; reboot ;;
+18 | 18) clear ; restartservice ;;
+19 | 19) clear ; show_ports ;;
+20 | 20) clear ; m-xray ;;
+21 | 21) clear ; setupslow ;;
+22 | 22) clear ; dess ;;
+0 | 0) clear ; menu ;;
 *) clear ; menu ;;
 esac

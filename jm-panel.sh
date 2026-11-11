@@ -74,7 +74,7 @@ show_panel() {
     printf " ${BIBlue}│${NC}${BGCOLOR}%*s${NC}${BIBlue}│${NC}\n" "$inner" ""
     printf " ${BIBlue}│${NC}${BGCOLOR}%s${NC}${BIBlue}│${NC}\n" "$(visual_center "${WHITE}🔒  JM SCRIPT${CYAN}  VPN SERVER${WHITE}  ◈${NC}" "$inner")"
     printf " ${BIBlue}│${NC}${BGCOLOR}%s${NC}${BIBlue}│${NC}\n" "$(visual_center "${CYAN}╱╲╱╲  WORLD NET  ╱╲╱╲  HACKER TERMINAL${NC}" "$inner")"
-    printf " ${BIBlue}│${NC}${BGCOLOR}%s${NC}${BIBlue}│${NC}\n" "$(visual_center "${CYAN}• • •   AUTOSCRIPT MULTIPORT FREE   • • •${NC}" "$inner")"
+    printf " ${BIBlue}│${NC}${BGCOLOR}%s${NC}${BIBlue}│${NC}\n" "$(visual_center "${CYAN}• • •   SCRIPT JM VPN   • • •${NC}" "$inner")"
     echo -e " ${BIBlue}╰${line}╯${NC}"
 
     echo -e " ${BIBlue}╭${line}╮${NC}"
