@@ -76,18 +76,24 @@ setup_box64() {
     return 0
 }
 kill_zombies() {
-    pkill -9 -f "apt|dpkg" 2>/dev/null
-    pkill -9 -f "unattended-upgrades" 2>/dev/null
-    rm -f /var/lib/dpkg/lock* 2>/dev/null
-    rm -f /var/lib/apt/lists/lock 2>/dev/null
-    rm -f /var/cache/apt/archives/lock 2>/dev/null
-    dpkg --configure -a 2>/dev/null
+    local pids="" attempt
+    echo -e "${YELLOW}Esperando a que apt/dpkg quede libre...${NC}"
+    for attempt in $(seq 1 60); do
+        pids=$(for process in apt apt-get dpkg unattended-upgrade; do pgrep -x "$process" 2>/dev/null; done | sort -u | tr '\n' ' ')
+        [ -z "$pids" ] && break
+        sleep 2
+    done
+    if [ -n "$pids" ]; then
+        echo -e "${RED}No se pudo liberar apt/dpkg. Procesos activos: ${pids}${NC}"
+        return 1
+    fi
+    dpkg --configure -a 2>/dev/null || return 1
 }
 clear
 run_silent() {
     "$@" > /dev/null 2>&1
 }
-kill_zombies
+kill_zombies || exit 1
 apt install -y figlet boxes >/dev/null 2>&1
 apt install -y pv >/dev/null 2>&1
 if [[ "$ARCH" == "aarch64" ]]; then
@@ -177,7 +183,12 @@ echo -e "  ${BIBlue}╭═══════════════════
 echo -e "  ${BIBlue}│ ${BGCOLOR}      ACTUALIZANDO BASE DE DATOS!   ${NC}${BIBlue} │${NC}"
 echo -e "  ${BIBlue}╰══════════════════════════════════════╯${NC}"
 sleep 0.5
-kill_zombies
+kill_zombies || exit 1
+if ! apt-get -f install -y; then
+    echo -e "${RED}No se pudieron reparar las dependencias de apt.${NC}"
+    echo -e "${YELLOW}Revisa el error anterior y corrígelo antes de continuar.${NC}"
+    exit 1
+fi
 # ===== INSTALACIÓN DIRECTA SIN FUNCIONES COMPLEJAS =====
 echo -e "\n${YELLOW}📦 Instalando Paquetes Esenciales:${NC}\n"
 # Actualizaciones básicas
@@ -186,20 +197,32 @@ apt upgrade -y
 apt dist-upgrade -y
 apt full-upgrade -y
 # Instalar sudo
-apt install sudo -y
-echo "✅ sudo instalado"
+if apt install sudo -y; then
+    echo "✅ sudo instalado"
+else
+    echo -e "${RED}❌ No se pudo instalar sudo; instalación cancelada.${NC}"
+    exit 1
+fi
 # Limpiar
 sudo apt-get clean all
 # Instalar debconf-utils
-apt install -y debconf-utils
-echo "✅ debconf-utils instalado"
+if apt install -y debconf-utils; then
+    echo "✅ debconf-utils instalado"
+else
+    echo -e "${RED}❌ No se pudo instalar debconf-utils; instalación cancelada.${NC}"
+    exit 1
+fi
 # Eliminar paquetes conflictivos
 apt-get remove --purge ufw firewalld -y 2>/dev/null
 apt-get remove --purge exim4 -y 2>/dev/null
 apt-get autoremove -y
 # Instalar software-properties-common
-apt install -y --no-install-recommends software-properties-common
-echo "✅ software-properties-common instalado"
+if apt install -y --no-install-recommends software-properties-common; then
+    echo "✅ software-properties-common instalado"
+else
+    echo -e "${RED}❌ No se pudo instalar software-properties-common; instalación cancelada.${NC}"
+    exit 1
+fi
 # Configurar iptables-persistent
 echo iptables-persistent iptables-persistent/autosave_v4 boolean true | debconf-set-selections
 echo iptables-persistent iptables-persistent/autosave_v6 boolean true | debconf-set-selections
