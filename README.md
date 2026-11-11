@@ -19,7 +19,6 @@ Desde el VPS, descarga el instalador principal y ejecútalo como `root`:
 sudo -i
 ```
 ```bash
-sudo -i
 wget -O /root/jm-script.sh https://raw.githubusercontent.com/Internetjm/personalScript/main/jm-script.sh
 ```
 
