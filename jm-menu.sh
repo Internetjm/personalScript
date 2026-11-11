@@ -1437,20 +1437,45 @@ function edit_banner(){
 }
 
 function jm_api_install_or_repair(){
-    local source="" candidate port
+    local source="" candidate port script_dir download_tmp
     if [ -n "${JM_API_SOURCE:-}" ] && [ -f "$JM_API_SOURCE" ]; then
         source="$JM_API_SOURCE"
     else
-        for candidate in /root/jm_api.py /root/JM-SCRIPT/jm_api.py /usr/local/share/jm_api.py /usr/local/bin/jm_api.py; do
+        script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)
+        for candidate in \
+            "$script_dir/jm_api.py" \
+            /root/jm_api.py \
+            /root/JM-SCRIPT/jm_api.py \
+            /usr/local/sbin/jm_api.py \
+            /usr/local/share/jm_api.py \
+            /usr/local/bin/jm_api.py; do
             if [ -f "$candidate" ]; then
                 source="$candidate"
                 break
             fi
         done
     fi
+
+    # El menú suele instalarse solo. En ese caso obtiene el backend desde
+    # el mismo repositorio antes de mostrar el error de archivo faltante.
+    if [ -z "$source" ] && { command -v curl >/dev/null 2>&1 || command -v wget >/dev/null 2>&1; }; then
+        download_tmp=$(mktemp /tmp/jm_api.XXXXXX.py)
+        if command -v curl >/dev/null 2>&1; then
+            curl -fsSL "${JM_API_URL:-https://raw.githubusercontent.com/Internetjm/personalScript/main/jm_api.py}" -o "$download_tmp" 2>/dev/null
+        else
+            wget -qO "$download_tmp" "${JM_API_URL:-https://raw.githubusercontent.com/Internetjm/personalScript/main/jm_api.py}" 2>/dev/null
+        fi
+        if [ -s "$download_tmp" ] && grep -q "JM API" "$download_tmp" 2>/dev/null; then
+            source="$download_tmp"
+        else
+            rm -f "$download_tmp"
+            download_tmp=""
+        fi
+    fi
+
     if [ -z "$source" ]; then
         echo "No se encontró jm_api.py para instalar."
-        echo "Copia el archivo a /root/jm_api.py y vuelve a ejecutar esta opción."
+        echo "Coloca jm_api.py junto al menú o define JM_API_URL y vuelve a ejecutar esta opción."
         read -r -n 1 -s -p "Presiona una tecla..."
         return
     fi
@@ -1482,6 +1507,7 @@ UNIT
     systemctl daemon-reload
     systemctl enable --now jm-api
     command -v ufw >/dev/null 2>&1 && ufw allow "$port/tcp" >/dev/null 2>&1 || true
+    [ -n "$download_tmp" ] && rm -f "$download_tmp"
     echo "API instalada/reparada correctamente."
     echo "Key: $(cat /etc/jm-api/api.key)"
     systemctl is-active --quiet jm-api && echo "Servicio jm-api: ACTIVO" || echo "Servicio jm-api: INACTIVO"
