@@ -15,14 +15,20 @@ Script de administración para VPS Linux con herramientas de acceso SSH/VPN, Xra
 ## Instalación
 
 Desde el VPS, descarga el instalador principal y ejecútalo como `root`:
-
+```bash
+sudo -i
+```
 ```bash
 sudo -i
 wget -O /root/jm-script.sh https://raw.githubusercontent.com/Internetjm/personalScript/main/jm-script.sh
-chmod +x /root/jm-script.sh
-bash /root/jm-script.sh
 ```
 
+```bash
+chmod +x /root/jm-script.sh
+```
+```bash
+bash /root/jm-script.sh
+```
 El instalador configura las dependencias, SSH/OVPN, Xray, WebSocket, UDP y el menú de administración. Al finalizar, el menú queda disponible con:
 
 ```bash
