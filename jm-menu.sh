@@ -292,6 +292,7 @@ mrow 06 "MODO TOKEN"   "$total_token" 12 "REINICIAR VPS"
 mrow 07 "BORRAR EXP"   ""             13 "RESET SERVICIOS"
 mrow 14 "HCR SERVER"   ""             16 "VER PUERTOS"
 mrow 15 "BHTTP SERVER" ""             17 "XRAY CORE"
+mrow 18 "API BACKEND"  ""             89 "EDITAR BANNER"
 mrow 24 "SERVICIOS ON" ""             25 "INSTALAR SlowDNS"
 mrow 26 "INSTALAR UDP" ""             66 "DESINTALAR SCRIPT" RED
 echo -e " ${COLOR1}╰══════════════════════════════════════════════════════════╯${NC}"
@@ -1402,6 +1403,104 @@ echo -e " ${COLOR1} CERTIFICADO APLICADO "
 sleep 1
 menu
 }
+function edit_banner(){
+    local editor="${EDITOR:-nano}"
+    local banner_file="/etc/issue.net"
+
+    mkdir -p "$(dirname "$banner_file")"
+    [ -f "$banner_file" ] || : > "$banner_file"
+    "$editor" "$banner_file"
+
+    # OpenSSH no muestra /etc/issue.net si Banner no está configurado.
+    if [ -f /etc/ssh/sshd_config ]; then
+        if grep -qE '^[#[:space:]]*Banner[[:space:]]+' /etc/ssh/sshd_config; then
+            sed -i 's|^[#[:space:]]*Banner[[:space:]].*|Banner /etc/issue.net|' /etc/ssh/sshd_config
+        else
+            echo 'Banner /etc/issue.net' >> /etc/ssh/sshd_config
+        fi
+        if command -v sshd >/dev/null 2>&1 && sshd -t 2>/dev/null; then
+            systemctl reload ssh 2>/dev/null || systemctl reload sshd 2>/dev/null || true
+        else
+            echo "Advertencia: sshd_config no pasó la validación; revisa la configuración SSH."
+        fi
+    fi
+
+    # Dropbear lee el banner al iniciar, por eso debe reiniciarse.
+    for service in dropbear_custom dropbear; do
+        if systemctl list-unit-files "${service}.service" 2>/dev/null | grep -q "${service}.service"; then
+            systemctl restart "$service" 2>/dev/null || true
+        fi
+    done
+    echo "Banner actualizado y servicios SSH recargados."
+    read -r -n 1 -s -p "Presiona cualquier tecla para regresar al MENU"
+    menu
+}
+
+function jm_api_menu(){
+    local api_key api_port api_url choice user response
+    api_port=$(grep -oE 'JM_API_PORT=[0-9]+' /etc/systemd/system/jm-api.service 2>/dev/null | cut -d= -f2)
+    api_port=${api_port:-8085}
+    api_url="http://127.0.0.1:${api_port}"
+    while true; do
+        clear
+        echo -e "${COLOR1}╭═══════════════════════════════════════════════════════════╮${NC}"
+        echo -e "${COLOR1}│${NC}              ${WH}JM API - VALIDAR BACKEND${NC}              ${COLOR1}│${NC}"
+        echo -e "${COLOR1}╰═══════════════════════════════════════════════════════════╯${NC}"
+        if [ -f /etc/jm-api/api.key ]; then
+            api_key=$(cat /etc/jm-api/api.key)
+            echo -e " ${WH}Key:${NC} ${api_key}"
+        else
+            api_key=""
+            echo -e " ${RED}Key: no existe /etc/jm-api/api.key${NC}"
+        fi
+        echo -e " ${WH}Endpoint local:${NC} ${api_url}"
+        systemctl is-active --quiet jm-api && echo -e " ${WH}Servicio:${NC} ${COLOR1}ACTIVO${NC}" || echo -e " ${WH}Servicio:${NC} ${RED}INACTIVO${NC}"
+        echo ""
+        echo " [1] Validar instalación, servicio y key"
+        echo " [2] Probar GET /api/v1/users"
+        echo " [3] Probar GET /api/v1/users/<usuario>"
+        echo " [4] Probar GET /api/v1/users/<usuario>/remaining"
+        echo " [5] Mostrar comandos curl para el backend"
+        echo " [0] Regresar"
+        read -r -p " Selecciona una opción: " choice
+        case "$choice" in
+            1)
+                echo ""
+                [ -x /usr/local/bin/jm_api.py ] && echo "OK: /usr/local/bin/jm_api.py" || echo "ERROR: no existe el script instalado"
+                [ -s /etc/jm-api/api.key ] && echo "OK: API key configurada" || echo "ERROR: API key vacía o inexistente"
+                systemctl is-active --quiet jm-api && echo "OK: jm-api activo" || echo "ERROR: jm-api inactivo"
+                read -r -n 1 -s -p "Presiona una tecla..."
+                ;;
+            2)
+                response=$(curl -sS --max-time 5 -H "X-API-Key: ${api_key}" "${api_url}/api/v1/users" 2>&1) || true
+                echo "${response}"
+                read -r -n 1 -s -p "Presiona una tecla..."
+                ;;
+            3)
+                read -r -p "Usuario: " user
+                response=$(curl -sS --max-time 5 -H "X-API-Key: ${api_key}" "${api_url}/api/v1/users/${user}" 2>&1) || true
+                echo "${response}"
+                read -r -n 1 -s -p "Presiona una tecla..."
+                ;;
+            4)
+                read -r -p "Usuario: " user
+                response=$(curl -sS --max-time 5 -H "X-API-Key: ${api_key}" "${api_url}/api/v1/users/${user}/remaining" 2>&1) || true
+                echo "${response}"
+                read -r -n 1 -s -p "Presiona una tecla..."
+                ;;
+            5)
+                echo "curl -H 'X-API-Key: ${api_key}' ${api_url}/api/v1/users"
+                echo "curl -H 'X-API-Key: ${api_key}' ${api_url}/api/v1/users/USUARIO"
+                echo "curl -H 'X-API-Key: ${api_key}' ${api_url}/api/v1/users/USUARIO/remaining"
+                read -r -n 1 -s -p "Presiona una tecla..."
+                ;;
+            0) menu; return ;;
+            *) echo "Opción inválida"; sleep 1 ;;
+        esac
+    done
+}
+
+if false; then
 serverV=""
 localV=$(cat /opt/.ver 2>/dev/null | tr -d '[:space:]')
 echo -e "${COLOR1}╭═══════════════════════════════════════════════════════════╮${NC}"
@@ -1417,6 +1516,7 @@ echo -e "${COLOR1}│$NC ${WH} ❈ ᴛᴇʟᴇɢʀᴀᴍ ${NC} : \e[1;32m@ᴊᴇ
 echo -e "${COLOR1}│$NC ${WH} ❈ ᴋᴇʏ ᴠᴇʀɪꜰɪᴄᴀᴅᴀ ${NC}: ${yl}$(cat /usr/bin/cred) ${NC}${COLOR1}"
 echo -e "${COLOR1}│$NC ${WH} ❈ ${RED}𝐀𝐕𝐈𝐒𝐎${NC}: ${purple}ᴍᴀɴᴅᴀ ᴄᴀᴘᴛᴜʀᴀ ᴀʟ ᴀᴅᴍ ᴇᴠɪᴛᴀ ᴇʟ ʙᴀɴ ${NC}${COLOR1}"
 echo -e "${COLOR1}╰═══════════════════════════════════════════════════════════╯${NC}"
+fi
 echo -e ""
 echo -ne " ${WH}Selecciona Opc MENU ${COLOR1}: ${WH}"; read opt
 case $opt in
@@ -1441,13 +1541,14 @@ case $opt in
 15 | 15) clear ; m-bhttp ;;
 16 | 16) clear ; show_ports ;;
 17 | 17) clear ; m-xray ;;
+18 | 18) clear ; jm_api_menu ;;
 20 | 20) clear ; setupslow ;;
 #21 | 21) clear ; $ressee2 ;;
 #20 | 22) clear ; $ressee3 ;;
 24 | 24) clear ; running;;
 25 | 25) clear ; setupslow ;;
 26 | 26) clear ; setupudp ;;
-89 | 89) clear ; nano /etc/issue.net ;;
+89 | 89) clear ; edit_banner ;;
 #88 | 88) clear ; m-noobz ;;
 #77 | 77) clear ; newx ;;
 66 | 66) clear ; dess ;;

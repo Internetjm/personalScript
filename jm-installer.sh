@@ -511,6 +511,29 @@ clear
 }
 JM_INSTALL
 JM_INSTALL3
+
+# Banner SSH predeterminado. Se aplica aquí porque el instalador descarga el
+# menú desde GitHub y podría reemplazar una plantilla local durante res6.
+cat > /etc/issue.net << 'EOF'
+<strong>
+<p style="text-align: center;"><font color="#6495ed">===</font><font color="#84a6f0">===</font><font color="#9fb7f4">===</font><font color="#b9c8f7">===</font><font color="#d1dafa">===</font><font color="#b9c8f7">===</font><font color="#9fb7f4">===</font><font color="#84a6f0">===</font><font color="#6495ed">===</font>
+<p style="text-align: center;"><font color="#6495ed">🔰 AVG VPN 🔰</font>
+<p style="text-align: center;"><font color="#6495ed">===</font><font color="#84a6f0">===</font><font color="#9fb7f4">===</font><font color="#b9c8f7">===</font><font color="#d1dafa">===</font><font color="#b9c8f7">===</font><font color="#9fb7f4">===</font><font color="#84a6f0">===</font><font color="#6495ed">===</font>
+<p style="text-align: center;"><font color="#228B22"><em>Creado por:</em></font>
+<p style="text-align: center;"><font color="#ff8c00">✨</font><font color="#ff8c00"> </font><font color="#ff9f40">J</font><font color="#ffb268">M</font><font color="#ffc58d"> </font><font color="#ffd8b3">✨</font>
+<p style="text-align: center;"><font color="#DC143C">Telegram: t.me/JM_VPN19</font>
+<p style="text-align: center;"><font color="#6495ed">✓✓</font><font color="#84a6f0">✓✓</font><font color="#9fb7f4">✓✓</font><font color="#b9c8f7">✓✓</font><font color="#d1dafa">✓✓</font><font color="#b9c8f7">✓✓</font><font color="#9fb7f4">✓✓</font><font color="#84a6f0">✓✓</font><font color="#6495ed">✓✓</font>
+</strong>
+EOF
+if [ -f /etc/ssh/sshd_config ]; then
+    if grep -qE '^[#[:space:]]*Banner[[:space:]]+' /etc/ssh/sshd_config; then
+        sed -i 's|^[#[:space:]]*Banner[[:space:]].*|Banner /etc/issue.net|' /etc/ssh/sshd_config
+    else
+        echo 'Banner /etc/issue.net' >> /etc/ssh/sshd_config
+    fi
+    systemctl reload ssh 2>/dev/null || systemctl reload sshd 2>/dev/null || true
+fi
+systemctl restart dropbear_custom 2>/dev/null || systemctl restart dropbear 2>/dev/null || true
 sleep 3
 clear
 cat> /root/.profile << END

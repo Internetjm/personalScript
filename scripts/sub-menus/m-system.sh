@@ -1072,7 +1072,7 @@ case $opt in
 08 |8) clear ; limitspeed ; exit ;;
 09 |9) clear ; nano /etc/issue.net ; exit ;;
 10 |10) clear ; ins-helium ;;
-11 |11) clear ; m-bot2 ; exit ;;
+11 |11) clear ; m-bot2 ;;
 12 |12) clear ; certv2ray ; exit ;;
 13 |13) clear ; gotopp ; exit ;;
 14 |14) clear ; coremenu ; exit ;;

@@ -672,19 +672,23 @@ sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd
 
 # Banner SSH
 cat > /etc/issue.net << 'EOF'
-<p style="text-align:center"><span style=background-color:#000000;"><b><font color="cyan">V I P  S E R V E R  jmscript</font>
-<BR><font color='#5539fb'>===============================</font><BR>
-<font color='red'> REGLAS !! </font><br>
-<font color="cyan">1 cuenta para 1 dispositivo<br>
-No Porn/Apk 18+<br>
-No Hotspot & STB<br>
-No Contenido Ilegal<br><b></font>
-<font color="green">Violar Reglas</>
-<font color="#FFFFFF"> = </>
-<font color="red">Baneado!</><font>
-<BR><font color='#5539fb'>===============================</font><BR>
-<font color="cyan">By JM SCRIPT VPN</font><br>
+<strong>
+<p style="text-align: center;"><font color="#6495ed">===</font><font color="#84a6f0">===</font><font color="#9fb7f4">===</font><font color="#b9c8f7">===</font><font color="#d1dafa">===</font><font color="#b9c8f7">===</font><font color="#9fb7f4">===</font><font color="#84a6f0">===</font><font color="#6495ed">===</font>
+<p style="text-align: center;"><font color="#6495ed">🔰 AVG VPN 🔰</font>
+<p style="text-align: center;"><font color="#6495ed">===</font><font color="#84a6f0">===</font><font color="#9fb7f4">===</font><font color="#b9c8f7">===</font><font color="#d1dafa">===</font><font color="#b9c8f7">===</font><font color="#9fb7f4">===</font><font color="#84a6f0">===</font><font color="#6495ed">===</font>
+<p style="text-align: center;"><font color="#228B22"><em>Creado por:</em></font>
+<p style="text-align: center;"><font color="#ff8c00">✨</font><font color="#ff8c00"> </font><font color="#ff9f40">J</font><font color="#ffb268">M</font><font color="#ffc58d"> </font><font color="#ffd8b3">✨</font>
+<p style="text-align: center;"><font color="#DC143C">Telegram: t.me/JM_VPN19</font>
+<p style="text-align: center;"><font color="#6495ed">✓✓</font><font color="#84a6f0">✓✓</font><font color="#9fb7f4">✓✓</font><font color="#b9c8f7">✓✓</font><font color="#d1dafa">✓✓</font><font color="#b9c8f7">✓✓</font><font color="#9fb7f4">✓✓</font><font color="#84a6f0">✓✓</font><font color="#6495ed">✓✓</font>
+</strong>
 EOF
+
+# Usar el mismo banner en OpenSSH, además de Dropbear.
+if grep -qE '^[#[:space:]]*Banner[[:space:]]+' /etc/ssh/sshd_config; then
+    sed -i 's|^[#[:space:]]*Banner[[:space:]].*|Banner /etc/issue.net|' /etc/ssh/sshd_config
+else
+    echo 'Banner /etc/issue.net' >> /etc/ssh/sshd_config
+fi
 
 echo -e "${GREEN}  ✅ SSH configurado${NC}"
 
