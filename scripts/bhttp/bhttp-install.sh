@@ -168,12 +168,54 @@ if [ "$SOLO_DIAG" = 1 ]; then
   exit 0
 fi
 
+
+# ------------------------------------------------------------ sshd: KEX para la app
+# La libreria SSH de la app solo ofrece Diffie-Hellman; OpenSSH moderno puede
+# traerlo desactivado y el SSH cae con "no matching key exchange method found".
+# Se habilita SOLO diffie-hellman-group-exchange-sha256 (el unico seguro que
+# ofrece la app) en un archivo aparte de sshd_config.d. Si algo falla, se revierte.
+KEX_CONF="/etc/ssh/sshd_config.d/00-bhttp-kex.conf"
+KEX_ALGO="diffie-hellman-group-exchange-sha256"
+habilitar_kex_app() {
+  command -v sshd >/dev/null 2>&1 || return 0
+  if sshd -T 2>/dev/null | grep -i '^kexalgorithms ' | grep -q "$KEX_ALGO"; then
+    info "sshd ya acepta $KEX_ALGO"
+    return 0
+  fi
+  if ! ssh -Q kex 2>/dev/null | grep -qx "$KEX_ALGO"; then
+    info "este OpenSSH no soporta $KEX_ALGO: la app no podra negociar SSH"
+    return 0
+  fi
+  if ! grep -qE '^[[:space:]]*Include[[:space:]]+/etc/ssh/sshd_config\.d/' /etc/ssh/sshd_config 2>/dev/null; then
+    info "sshd_config no incluye sshd_config.d: agrega a mano  KexAlgorithms +$KEX_ALGO"
+    return 0
+  fi
+  mkdir -p /etc/ssh/sshd_config.d
+  echo "KexAlgorithms +$KEX_ALGO" > "$KEX_CONF"
+  if sshd -t 2>/dev/null; then
+    systemctl reload ssh 2>/dev/null || systemctl reload sshd 2>/dev/null
+    if sshd -T 2>/dev/null | grep -i '^kexalgorithms ' | grep -q "$KEX_ALGO"; then
+      info "sshd: habilitado $KEX_ALGO para la app ($KEX_CONF)"
+    else
+      rm -f "$KEX_CONF"
+      info "no se pudo aplicar $KEX_ALGO (otra directiva lo pisa); revisa: grep -ri kexalgorithms /etc/ssh/"
+    fi
+  else
+    rm -f "$KEX_CONF"
+    info "sshd -t fallo con $KEX_ALGO; se revirtio el cambio"
+  fi
+}
+
 # ------------------------------------------------------------ desinstalar
 if [ "$DESINSTALAR" = 1 ]; then
   systemctl stop "$SERVICE" 2>/dev/null
   systemctl disable "$SERVICE" 2>/dev/null
   rm -f "$UNIT"; rm -rf "$DESTDIR"
   rm -f /etc/sysctl.d/99-bhttp.conf /etc/security/limits.d/99-bhttp.conf
+  if [ -f /etc/ssh/sshd_config.d/00-bhttp-kex.conf ]; then
+    rm -f /etc/ssh/sshd_config.d/00-bhttp-kex.conf
+    sshd -t 2>/dev/null && { systemctl reload ssh 2>/dev/null || systemctl reload sshd 2>/dev/null; }
+  fi
   systemctl daemon-reload 2>/dev/null
   verde "Servidor BHTTP desinstalado (tuning de red revertido; reinicia para aplicar del todo)."
   exit 0
@@ -568,6 +610,9 @@ info "servicio en $UNIT"
 
 # ------------------------------------------------------------ afinar la red
 afinar_tcp
+
+# ------------------------------------------------------------ sshd compatible con la app
+habilitar_kex_app
 
 # ------------------------------------------------------------ arrancar
 paso "3/4" "Arrancando"
