@@ -780,6 +780,48 @@ read -n 1 -s -r -p "Presione cualquier tecla para volver al MENU"
 m-sshovpn
 }
 
+show_api_user_info() {
+local account="$1" response="" api_key="" account_file=""
+api_key=$(cat /etc/jm-api/api.key 2>/dev/null || true)
+if [ -n "$api_key" ] && command -v curl >/dev/null 2>&1; then
+response=$(curl -fsS --max-time 5 -H "X-API-Key: ${api_key}" "http://127.0.0.1:8085/api/v1/users/${account}" 2>/dev/null || true)
+fi
+if [ -z "$response" ]; then
+account_file="/etc/jm-api/accounts/${account}.json"
+[ -f "$account_file" ] && response=$(cat "$account_file")
+fi
+[ -n "$response" ] || return 1
+printf '%s' "$response" | python3 -c '
+import json, sys
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    raise SystemExit(1)
+if not data.get("ok", True):
+    raise SystemExit(1)
+def val(obj, key, default="-"):
+    value = obj.get(key, default) if isinstance(obj, dict) else default
+    return default if value in (None, "") else str(value)
+print("╭════════════════════════════════════════════════════════════╮")
+print("│              CONFIGURACIÓN DE USUARIO (API)                │")
+print("╰════════════════════════════════════════════════════════════╯")
+for label, key in (("USUARIO", "username"), ("CONTRASEÑA", "password"), ("UUID", "uuid"), ("CREADO", "created_at"), ("EXPIRA", "expires_at"), ("LÍMITE IP", "ip_limit")):
+    print(f"{label:<12}: {val(data, key)}")
+protocols = data.get("protocols", {})
+for name, info in protocols.items():
+    if not isinstance(info, dict):
+        continue
+    state = "ACTIVO" if info.get("installed") else "NO INSTALADO"
+    print(f"\n[{name.upper()}] {state}")
+    for key in ("host", "port", "port_range", "username", "password", "uri", "ws_uri", "ssl_uri", "payload_ws"):
+        if key in info and info[key] not in (None, ""):
+            value = info[key]
+            if isinstance(value, (dict, list)):
+                value = json.dumps(value, ensure_ascii=False, separators=(", ", ": "))
+            print(f"  {key}: {value}")
+'
+}
+
 function cekconfig(){
 checking_sc
 rm -rf /root/checkIP.*
@@ -824,7 +866,13 @@ fi
 fi
 done
 Login=$(grep -E "^### " "/etc/xray/ssh" | cut -d ' ' -f 2 | sed -n "${CLIENT_NUMBER}"p)
-cat /etc/xray/sshx/akun/log-create-${Login}.log
+log_file="/etc/xray/sshx/akun/log-create-${Login}.log"
+if [ -f "$log_file" ]; then
+cat "$log_file"
+elif ! show_api_user_info "$Login"; then
+echo -e "${RED}No se encontró información para ${Login}.${NC}"
+echo -e "El usuario no tiene log antiguo ni registro API legible."
+fi
 read -n 1 -s -r -p "   Presione cualquier tecla para volver al MENU"
 menu
 }
