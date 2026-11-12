@@ -402,10 +402,59 @@ class Server:
                     % (sess.hex()[:8], len(self.sessions)))
             return s
 
+    async def http_tunnel(self, first, reader, writer):
+        """Modo HTTP (CONNECT / payload) para clientes que abren con texto.
+        Responde 200/101, ignora el destino pedido y retransmite en crudo
+        SOLO al backend configurado (sshd)."""
+        data = first
+        while b"\r\n\r\n" not in data:
+            chunk = await asyncio.wait_for(reader.read(4096), timeout=10)
+            if not chunk:
+                return
+            data += chunk
+            if len(data) > 16384:
+                return
+        head, _, rest = data.partition(b"\r\n\r\n")
+        line = head.split(b"\r\n", 1)[0].decode("latin-1", "replace")
+        if line.upper().startswith("CONNECT "):
+            writer.write(b"HTTP/1.1 200 Connection Established\r\n\r\n")
+        else:
+            writer.write(b"HTTP/1.1 101 Switching Protocols\r\n"
+                         b"Upgrade: websocket\r\nConnection: Upgrade\r\n\r\n")
+        await writer.drain()
+        bhost, bport = self.backend
+        br, bw = await asyncio.open_connection(bhost, bport)
+        log("http-tunel: %s -> backend %s:%d" % (line[:40], bhost, bport))
+        if rest:
+            bw.write(rest)
+            await bw.drain()
+
+        async def pump(r, w):
+            try:
+                while True:
+                    d = await r.read(65536)
+                    if not d:
+                        break
+                    w.write(d)
+                    await w.drain()
+            except Exception:
+                pass
+            finally:
+                try:
+                    w.close()
+                except Exception:
+                    pass
+        await asyncio.gather(pump(reader, bw), pump(br, writer))
+
     async def handle(self, reader, writer):
         try:
+            first = await reader.readexactly(1)
+            if first[0] > 4:   # no es un modo BHTTP (0-4): es texto HTTP
+                await self.http_tunnel(first, reader, writer)
+                return
             while True:
-                hdr = await reader.readexactly(29)
+                hdr = (first + await reader.readexactly(28)) if first else await reader.readexactly(29)
+                first = b""
                 mode = hdr[0]
                 sess = hdr[1:17]
                 seq = int.from_bytes(hdr[17:25], "big")
