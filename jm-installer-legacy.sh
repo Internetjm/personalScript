@@ -47,6 +47,10 @@ echo -e "${GREEN}  ✅ Paquetes instalados${NC}"
 # ─── XRAY ────────────────────────────────────────────────────────────────────
 echo -e "${YELLOW}[2/8]${NC} Instalando Xray..."
 mkdir -p /etc/xray /var/log/xray
+touch /var/log/xray/access.log /var/log/xray/error.log
+chown root:root /var/log/xray /var/log/xray/access.log /var/log/xray/error.log
+chmod 755 /var/log/xray
+chmod 640 /var/log/xray/access.log /var/log/xray/error.log
 
 XRAY_VER=$(curl -fsSL "https://api.github.com/repos/XTLS/Xray-core/releases/latest" 2>/dev/null \
     | grep '"tag_name"' | sed 's/.*"v\([^"]*\)".*/\1/' | head -1)

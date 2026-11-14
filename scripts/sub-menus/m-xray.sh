@@ -82,6 +82,16 @@ port_listening() {  # port_listening 443
     ss -H -ltn 2>/dev/null | awk '{print $4}' | grep -Eq "[:.]$1\$"
 }
 
+prepare_xray_logs() {
+    # Xray se ejecuta como root. Nginx/acme pueden haber creado estos archivos
+    # como www-data; si quedan así, Xray falla antes de abrir sus inbounds.
+    mkdir -p /var/log/xray
+    touch /var/log/xray/access.log /var/log/xray/error.log
+    chown root:root /var/log/xray /var/log/xray/access.log /var/log/xray/error.log
+    chmod 755 /var/log/xray
+    chmod 640 /var/log/xray/access.log /var/log/xray/error.log
+}
+
 # ── dominio ───────────────────────────────────────────────────────────────────
 ask_domain() {
     local cur ip dip
@@ -191,6 +201,7 @@ write_unit() {
     # Se reemplaza cualquier drop-in del instalador oficial que cambie la ruta de la config.
     rm -rf /etc/systemd/system/xray.service.d /etc/systemd/system/xray@.service.d
     mkdir -p /var/log/xray "${XRAY_ASSETS}"
+    prepare_xray_logs
     cat > "${XRAY_UNIT}" <<EOF
 [Unit]
 Description=Xray Service (JM SCRIPT)
@@ -629,6 +640,7 @@ EOF
 # ── flujo de instalación ──────────────────────────────────────────────────────
 start_and_verify() {
     step "Arranque"
+    prepare_xray_logs
     systemctl daemon-reload
     systemctl enable "${XRAY_SERVICE}" >/dev/null 2>&1
     systemctl restart "${XRAY_SERVICE}"
