@@ -13,6 +13,17 @@ Debe correr como root en el VPS donde esta instalado JM SCRIPT.
   POST /api/v1/users                 # crea o renueva tras 20 horas
   GET  /api/v1/users/<usuario>         # detalle de un usuario
   GET  /api/v1/users/<usuario>/remaining # solo segundos restantes
+
+  Generador de configuraciones AVG VPN (el catalogo vive en el panel central):
+  GET  /api/v1/info                      # estado de este VPS: dominio, protocolos, huella del certificado
+  GET  /api/v1/pin[?sni=]                # huella SHA-256 del certificado que sirve este VPS
+  POST /api/v1/preview                   # {"profile": {...}} -> .avg de muestra con los datos reales del VPS
+  POST /api/v1/render                    # {"username","password","ip_limit","profile"|"profiles"}:
+                                         #   reutiliza o crea la cuenta (24 h) y devuelve el .avg y el avgvpn://
+
+  python3 jm_api.py preview <perfil.json>
+  python3 jm_api.py render <usuario> <perfil.json> [--link]
+  python3 jm_api.py pin [sni]
 """
 import base64, hmac, json, os, re, secrets, subprocess, sys, threading, time, uuid as uuidlib
 from datetime import datetime, timedelta, timezone
@@ -422,6 +433,442 @@ def remaining_json(rec):
 
 
 # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Servidor HTTP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ═════════════════════════ AVG VPN: generador de .avg ═════════════════════════
+# El catalogo de perfiles (pais/compania/metodo) vive en el panel central. Este VPS solo recibe
+# un perfil, lo combina con los datos REALES de la cuenta (usuario, clave, UUID, dominio,
+# SlowDNS, UDP) y la huella del certificado de este VPS, y devuelve el .avg y el enlace avgvpn://.
+import hashlib, io, socket, ssl, unicodedata, zipfile
+from urllib.parse import parse_qs, urlparse
+
+LINK_PREFIX = "avgvpn://"
+
+# método -> tipo de túnel que entiende la app (ConfigParser)
+METHODS = {"ssh_direct": 1, "ssh_proxy": 2, "ssh_ssl": 3, "payload_ssl": 4,
+           "slowdns": 5, "udp": 6, "v2ray": 7}
+DEFAULT_PORT = {"ssh_direct": 80, "ssh_proxy": 80, "ssh_ssl": 443, "payload_ssl": 443,
+                "slowdns": 2222, "udp": 0, "v2ray": 443}
+ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{2,63}$")
+RESERVED_IDS = set()
+HOST_RE = re.compile(r"^(\{DOMAIN\}|[A-Za-z0-9]([A-Za-z0-9._-]{0,251}[A-Za-z0-9])?)$")
+IP_RE = re.compile(r"^\d{1,3}(\.\d{1,3}){3}$")
+FIELDS = ("id", "name", "country", "carrier", "method", "enabled", "front", "port", "sni",
+          "payload", "proxy_host", "proxy_port", "dns_resolver", "v2", "notes", "udp_up", "udp_down")
+
+
+def slug(text, maxlen=50):
+    t = unicodedata.normalize("NFKD", str(text)).encode("ascii", "ignore").decode()
+    t = re.sub(r"[^a-z0-9]+", "-", t.lower()).strip("-")
+    return t[:maxlen].strip("-")
+
+
+def _int(v, lo, hi, name):
+    try:
+        n = int(v)
+    except (TypeError, ValueError):
+        raise ValueError("%s debe ser un numero" % name)
+    if not lo <= n <= hi:
+        raise ValueError("%s fuera de rango (%d-%d)" % (name, lo, hi))
+    return n
+
+
+def _host(v, name):
+    v = str(v or "").strip()
+    if v and not HOST_RE.match(v):
+        raise ValueError("%s invalido (dominio, IP o {DOMAIN})" % name)
+    return v
+
+
+def validate_entry(d, partial=False):
+    if not isinstance(d, dict):
+        raise ValueError("el perfil debe ser un objeto JSON")
+    out = {k: d[k] for k in FIELDS if k in d}
+    if not partial:
+        for k in ("id", "name", "method"):
+            if not out.get(k):
+                raise ValueError("falta el campo '%s'" % k)
+    if "id" in out:
+        out["id"] = str(out["id"]).strip().lower()
+        if not ID_RE.match(out["id"]) or out["id"] in RESERVED_IDS:
+            raise ValueError("id invalido (a-z, 0-9, _ y -, de 3 a 64 caracteres)")
+    if "name" in out:
+        out["name"] = str(out["name"]).strip()[:80]
+        if not out["name"]:
+            raise ValueError("name vacio")
+    if "method" in out and out["method"] not in METHODS:
+        raise ValueError("method invalido; usa: " + ", ".join(sorted(METHODS)))
+    if "country" in out:
+        c = str(out["country"] or "").strip().upper()
+        if c and not re.match(r"^[A-Z]{2}$", c):
+            raise ValueError("country debe ser un codigo de 2 letras (CO, MX...)")
+        out["country"] = c
+    if "carrier" in out:
+        out["carrier"] = str(out["carrier"] or "").strip()[:40]
+    if "enabled" in out:
+        enabled = out["enabled"]
+        if isinstance(enabled, bool):
+            out["enabled"] = enabled
+        elif isinstance(enabled, str) and enabled.strip().lower() in ("true", "false"):
+            out["enabled"] = enabled.strip().lower() == "true"
+        else:
+            raise ValueError("enabled debe ser booleano")
+    if "front" in out:
+        out["front"] = _host(out["front"], "front")
+    if "sni" in out:
+        out["sni"] = _host(out["sni"], "sni")
+    if "proxy_host" in out:
+        out["proxy_host"] = _host(out["proxy_host"], "proxy_host")
+    if "port" in out:
+        out["port"] = _int(out["port"], 0, 65535, "port")
+    if "proxy_port" in out:
+        out["proxy_port"] = _int(out["proxy_port"] or 0, 0, 65535, "proxy_port")
+    if "dns_resolver" in out:
+        r = str(out["dns_resolver"] or "").strip()
+        if r and (not IP_RE.match(r) or any(int(part) > 255 for part in r.split("."))):
+            raise ValueError("dns_resolver debe ser una IP")
+        out["dns_resolver"] = r
+    if "payload" in out:
+        out["payload"] = str(out["payload"] or "")
+        if len(out["payload"]) > 3000:
+            raise ValueError("payload muy largo (max 3000)")
+    if "notes" in out:
+        out["notes"] = str(out["notes"] or "")[:300]
+    for k in ("udp_up", "udp_down"):
+        if k in out:
+            out[k] = str(out[k] or "").strip()[:10]
+    if "v2" in out:
+        v = out["v2"] or {}
+        if not isinstance(v, dict):
+            raise ValueError("v2 debe ser un objeto")
+        nv = {}
+        nv["protocol"] = str(v.get("protocol", "vmess")).lower()
+        if nv["protocol"] not in ("vmess", "vless", "trojan"):
+            raise ValueError("v2.protocol: vmess, vless o trojan")
+        nv["security"] = str(v.get("security", "none")).lower()
+        if nv["security"] not in ("none", "tls"):
+            raise ValueError("v2.security: none o tls")
+        if v.get("port"):
+            nv["port"] = _int(v["port"], 1, 65535, "v2.port")
+        nv["host"] = _host(v.get("host", "{DOMAIN}"), "v2.host") or "{DOMAIN}"
+        nv["sni"] = _host(v.get("sni", ""), "v2.sni")
+        path = str(v.get("path", "auto") or "auto")
+        if path != "auto" and not path.startswith("/"):
+            raise ValueError("v2.path debe empezar con / o ser 'auto'")
+        nv["path"] = path[:120]
+        out["v2"] = nv
+    if not partial:
+        m = out["method"]
+        out.setdefault("country", "")
+        out.setdefault("carrier", "")
+        out.setdefault("enabled", True)
+        out.setdefault("front", "{DOMAIN}")
+        out.setdefault("port", DEFAULT_PORT[m])
+        out.setdefault("sni", "")
+        out.setdefault("payload", "")
+        out.setdefault("proxy_host", "")
+        out.setdefault("proxy_port", 0)
+        out.setdefault("dns_resolver", "")
+        out.setdefault("notes", "")
+        out.setdefault("udp_up", "")
+        out.setdefault("udp_down", "")
+        if m == "v2ray":
+            out.setdefault("v2", {"protocol": "vmess", "security": "none", "host": "{DOMAIN}",
+                                  "sni": "", "path": "auto"})
+        else:
+            out.pop("v2", None)
+    return out
+
+
+# ───────────────────────── huella del certificado del VPS ─────────────────────────
+_PIN_CACHE = {}
+
+
+def cert_info(sni=""):
+    """Huella SHA-256 (hex minusculas, sin ':') del certificado que sirve el VPS en :443.
+    Se calcula contra 127.0.0.1:443 con el SNI pedido. JM_CERT_PIN la fija a mano."""
+    fixed = os.environ.get("JM_CERT_PIN", "").strip().lower().replace(":", "")
+    if fixed:
+        return {"pin": fixed, "self_signed": True, "subject": "", "source": "env"}
+    host = os.environ.get("JM_PIN_HOST", "127.0.0.1")
+    port = int(os.environ.get("JM_PIN_PORT", "443"))
+    key = (host, port, sni)
+    hit = _PIN_CACHE.get(key)
+    if hit and time.time() - hit[0] < 300:
+        return hit[1]
+    der = None
+    source = "tls"
+    try:
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        with socket.create_connection((host, port), timeout=5) as s:
+            with ctx.wrap_socket(s, server_hostname=sni or None) as t:
+                der = t.getpeercert(binary_form=True)
+    except Exception:
+        crt = rd("/etc/xray/xray.crt")
+        if crt:
+            try:
+                der = ssl.PEM_cert_to_DER_cert(crt[crt.index("-----BEGIN"):crt.index("-----END CERTIFICATE-----") + 25])
+                source = "xray.crt"
+            except ValueError:
+                der = None
+    if not der:
+        return {"pin": "", "self_signed": False, "subject": "", "source": "none"}
+    info = {"pin": hashlib.sha256(der).hexdigest(), "self_signed": True, "subject": "", "source": source}
+    if not DRY:
+        try:
+            pem = ssl.DER_cert_to_PEM_cert(der)
+            r = subprocess.run(["openssl", "x509", "-noout", "-subject", "-issuer"], input=pem,
+                               capture_output=True, text=True, timeout=5)
+            subj = re.search(r"subject=\s*(.*)", r.stdout)
+            iss = re.search(r"issuer=\s*(.*)", r.stdout)
+            if subj and iss:
+                info["subject"] = subj.group(1).strip()
+                info["self_signed"] = subj.group(1).strip() == iss.group(1).strip()
+        except Exception:
+            pass
+    _PIN_CACHE[key] = (time.time(), info)
+    return info
+
+
+# ───────────────────────── generador del .avg ─────────────────────────
+def acct_ctx(acct):
+    p = acct.get("protocols", {})
+    return {"domain": acct.get("host", ""), "user": acct.get("username", ""),
+            "pass": acct.get("password", ""), "uuid": acct.get("uuid", ""),
+            "exp_ms": int(acct.get("expires_at_epoch", 0)) * 1000,
+            "slow": p.get("slowdns", {}), "udp": p.get("udp_hysteria", {}), "p": p}
+
+
+def fill(s, ctx, front=""):
+    return (str(s or "").replace("{DOMAIN}", ctx["domain"]).replace("{FRONT}", front)
+            .replace("{USER}", ctx["user"]).replace("{PASS}", ctx["pass"]).replace("{UUID}", ctx["uuid"]))
+
+
+def _tls_settings(sni, domain):
+    info = cert_info(sni)
+    if not info["pin"]:
+        raise ValueError("no se pudo leer el certificado del VPS en el puerto 443 (revisa /api/v1/pin)")
+    tls = {"serverName": sni or domain}
+    if info["pin"] and info["self_signed"]:
+        tls["pinnedPeerCertSha256"] = info["pin"]      # certificado autofirmado: se fija la huella
+    elif sni and domain and sni.lower() != domain.lower():
+        tls["verifyPeerCertByName"] = domain           # CA real: se valida contra el dominio real
+    return tls
+
+
+def build_v2ray_json(entry, ctx):
+    v2 = entry.get("v2") or {}
+    proto = v2.get("protocol", "vmess")
+    sec = v2.get("security", "none")
+    addr = fill(entry.get("front") or "{DOMAIN}", ctx)
+    port = int(v2.get("port") or entry.get("port") or (443 if sec == "tls" else 80))
+    host = fill(v2.get("host") or "{DOMAIN}", ctx)
+    sni = fill(v2.get("sni", ""), ctx)
+    if not ctx["uuid"]:
+        raise ValueError("la cuenta no tiene UUID (Xray no esta instalado en el VPS)")
+    path = v2.get("path") or "auto"
+    if path == "auto":
+        path = ctx["p"].get(proto, {}).get("ws_path") or "/"
+    if proto == "vmess":
+        out = {"mux": {"concurrency": 8, "enabled": False}, "protocol": "vmess",
+               "settings": {"vnext": [{"address": addr, "port": port, "users": [
+                   {"alterId": 0, "encryption": "auto", "id": ctx["uuid"], "flow": "", "level": 8,
+                    "security": "auto"}]}]}}
+    elif proto == "vless":
+        out = {"mux": {"concurrency": 8, "enabled": False}, "protocol": "vless",
+               "settings": {"vnext": [{"address": addr, "port": port, "users": [
+                   {"id": ctx["uuid"], "encryption": "none", "level": 8}]}]}}
+    else:
+        out = {"mux": {"concurrency": 8, "enabled": False}, "protocol": "trojan",
+               "settings": {"servers": [{"address": addr, "port": port, "password": ctx["uuid"], "level": 8}]}}
+    stream = {"network": "ws", "security": sec,
+              "wsSettings": {"headers": {"Host": host}, "path": path}}
+    if sec == "tls":
+        stream["tlsSettings"] = _tls_settings(sni or host, ctx["domain"])
+    else:
+        stream["security"] = "none"
+    out["streamSettings"] = stream
+    out["tag"] = "proxy"
+    cfg = {"dns": {"hosts": {"domain:googleapis.cn": "googleapis.com"}, "servers": ["1.1.1.1"]},
+           "inbounds": [
+               {"listen": "127.0.0.1", "port": 10808, "protocol": "socks",
+                "settings": {"auth": "noauth", "udp": True, "userLevel": 8},
+                "sniffing": {"destOverride": ["http", "tls"], "enabled": False}, "tag": "socks"},
+               {"listen": "127.0.0.1", "port": 10809, "protocol": "http",
+                "settings": {"userLevel": 8}, "tag": "http"}],
+           "log": {"loglevel": "warning"},
+           "outbounds": [out, {"tag": "direct", "protocol": "freedom", "settings": {}},
+                         {"tag": "block", "protocol": "blackhole", "settings": {"response": {"type": "http"}}}],
+           "policy": {"levels": {"8": {"connIdle": 300, "downlinkOnly": 1, "handshake": 4, "uplinkOnly": 1}},
+                      "system": {"statsOutboundUplink": True, "statsOutboundDownlink": True}},
+           "routing": {"domainStrategy": "IPIfNonMatch",
+                       "rules": [{"type": "field", "ip": ["1.1.1.1"], "port": "53", "outboundTag": "proxy"}]},
+           "stats": {}}
+    return json.dumps(cfg), addr, port
+
+
+def build_props(entry, acct):
+    """Devuelve (lista ordenada de (clave, valor), advertencias)."""
+    ctx = acct_ctx(acct)
+    if not ctx["domain"]:
+        raise ValueError("el VPS no tiene dominio configurado (/etc/xray/domain)")
+    m = entry["method"]
+    front = fill(entry.get("front") or "{DOMAIN}", ctx)
+    port = entry.get("port") or DEFAULT_PORT[m]
+    sni = fill(entry.get("sni", ""), ctx)
+    payload = fill(entry.get("payload", ""), ctx, front)
+    warns = []
+    kv = {"file.appVersionCode": "1", "file.validade": str(ctx["exp_ms"]), "file.proteger": "0",
+          "file.msg": entry["name"], "Name": entry["name"], "Info": "Conexion Segura",
+          "FLAG": entry.get("country") or "US", "ServerIP": front, "ServerPort": str(port),
+          "SSLPort": "", "ProxyIP": "", "ProxyPort": "", "ServerUser": ctx["user"],
+          "ServerPass": ctx["pass"], "Payload": "", "SNI": "", "Slowdns": "", "Slowchave": "",
+          "Nameserver": ""}
+    flags = {}
+    if m == "ssh_direct":
+        kv["Payload"] = payload
+        flags["isDirect"] = "true"
+    elif m == "ssh_proxy":
+        if not entry.get("proxy_host"):
+            raise ValueError("ssh_proxy necesita proxy_host")
+        kv["Payload"] = payload
+        kv["ProxyIP"] = fill(entry["proxy_host"], ctx)
+        kv["ProxyPort"] = str(entry.get("proxy_port") or 80)
+        flags["isInject"] = "true"
+    elif m == "ssh_ssl":
+        kv["SSLPort"] = str(port)
+        kv["SNI"] = sni
+        flags["isSSL"] = "true"
+    elif m == "payload_ssl":
+        kv["SSLPort"] = str(port)
+        kv["SNI"] = sni
+        kv["Payload"] = payload
+        flags["isPayloadSSL"] = "true"
+    elif m == "slowdns":
+        s = ctx["slow"]
+        if not (s.get("installed") and s.get("nameserver") and s.get("public_key")):
+            raise ValueError("SlowDNS no esta instalado en el VPS")
+        kv["ServerIP"] = "127.0.0.1"
+        kv["ServerPort"] = str(port or 2222)
+        kv["Slowdns"] = entry.get("dns_resolver") or "8.8.8.8"
+        kv["Slowchave"] = s["public_key"]
+        kv["Nameserver"] = s["nameserver"]
+        flags["isSlow"] = "true"
+    elif m == "udp":
+        u = ctx["udp"]
+        if not u.get("installed"):
+            raise ValueError("UDP (Hysteria) no esta instalado en el VPS")
+        kv["ServerIP"] = ctx["domain"]
+        kv["ServerPort"] = ""
+        kv["ServerUser"] = ""
+        kv["ServerPass"] = ""
+        kv["UdpServer"] = ctx["domain"]
+        kv["UdpPort"] = u.get("port_range", "")
+        kv["UdpObfs"] = u.get("obfs", "")
+        kv["UdpAuth"] = "%s:%s" % (ctx["user"], ctx["pass"])
+        kv["UdpUp"] = entry.get("udp_up", "")
+        kv["UdpDown"] = entry.get("udp_down", "")
+        flags["isUdp"] = "true"
+    elif m == "v2ray":
+        js, addr, vport = build_v2ray_json(entry, ctx)
+        kv["ServerIP"], kv["ServerPort"] = addr, str(vport)
+        kv["ServerUser"] = kv["ServerPass"] = ""
+        kv["SNI"] = fill((entry.get("v2") or {}).get("sni", ""), ctx)
+        kv["Json"] = kv["v2rayJson"] = kv["ZYuHTCH"] = js
+        flags["isV2ray"] = "true"
+    props = list(kv.items())
+    props.append(("tunnelType", str(METHODS[m])))
+    props.extend(flags.items())
+    if m.startswith("ssh") or m in ("payload_ssl", "slowdns"):
+        props.append(("plainPass", "1"))     # el servidor SSH es normal: contraseña sin firmar
+    return props, warns
+
+
+def render_avg(props):
+    from xml.sax.saxutils import escape
+    lines = ['<?xml version="1.0" encoding="UTF-8"?>',
+             '<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">', "<properties>"]
+    for k, v in props:
+        lines.append('<entry key="%s">%s</entry>' % (escape(k), escape(str(v))))
+    lines.append("</properties>")
+    return "\n".join(lines) + "\n"
+
+
+def make_config(entry, acct):
+    props, warns = build_props(entry, acct)
+    xml = render_avg(props)
+    link = LINK_PREFIX + base64.b64encode(xml.encode("utf-8")).decode()
+    user = acct.get("username", "")
+    return {"id": entry["id"], "name": entry["name"], "country": entry.get("country", ""),
+            "carrier": entry.get("carrier", ""), "method": entry["method"],
+            "filename": "%s_%s.avg" % (slug(entry["name"], 40) or entry["id"], user),
+            "link": link, "avg": xml, "warnings": warns}
+
+
+def inline_profile(raw, n=0):
+    """Valida un perfil recibido en el cuerpo de la peticion (el id es opcional)."""
+    raw = dict(raw) if isinstance(raw, dict) else raw
+    if isinstance(raw, dict) and not raw.get("id"):
+        raw["id"] = "perfil-%d" % (n + 1)
+    return validate_entry(raw)
+
+
+def render_profiles(acct, profiles):
+    """Genera cada perfil con la cuenta dada. Devuelve (generados, omitidos)."""
+    done, skipped = [], []
+    for n, raw in enumerate(profiles):
+        try:
+            done.append(make_config(inline_profile(raw, n), acct))
+        except (ValueError, TypeError, AttributeError) as ex:
+            name = raw.get("name", "") if isinstance(raw, dict) else ""
+            skipped.append({"index": n, "name": name, "reason": str(ex)})
+    return done, skipped
+
+
+def load_account(user):
+    if not USER_RE.match(user):
+        return None
+    try:
+        rec = json.loads(rd(acct_file(user)) or "null")
+    except ValueError:
+        return None
+    return rec
+
+
+def sample_account():
+    """Cuenta de muestra (no se crea nada) para previsualizar un perfil con los datos reales del VPS."""
+    now = int(time.time())
+    rec = {"username": "usuario", "password": "clave", "uuid": "11111111-2222-3333-4444-555555555555",
+           "ip_limit": 1, "panel_exp": "", "created_at": now, "expires_at": now + HOURS * 3600}
+    return build_json(rec)
+
+
+def get_or_create_account(username=None, password=None, ip_limit=1):
+    """Si la cuenta ya existe (y no vencio) la reutiliza; si no, la crea."""
+    with LOCK:
+        rec = load_account(username) if username else None
+        if rec and rec.get("expires_at", 0) > time.time():
+            if password and password != rec.get("password"):
+                raise FileExistsError("la cuenta ya existe en este VPS con otra clave")
+            res = build_json(rec)
+            res["created"] = False
+            return res
+        res = create_account(username, password, ip_limit)
+        res["created"] = True
+        return res
+
+
+def vps_info():
+    s = sample_account()
+    p = s["protocols"]
+    pin = cert_info("")
+    return {"host": s["host"], "ssh_ports": p["ssh"]["ports"],
+            "xray": bool(p["vmess"].get("installed")), "slowdns": bool(p["slowdns"].get("installed")),
+            "udp_zivpn": bool(p["udp_zivpn"].get("installed")), "udp_hysteria": bool(p["udp_hysteria"].get("installed")),
+            "udp_custom": bool(p["udp_custom"].get("installed")), "cert_pin": pin["pin"],
+            "cert_self_signed": pin["self_signed"], "cert_source": pin["source"],
+            "duration_hours": HOURS}
+
 def api_key():
     return rd("/etc/jm-api/api.key")
 
@@ -449,8 +896,8 @@ class H(BaseHTTPRequestHandler):
 
     def body(self):
         n = int(self.headers.get("Content-Length") or 0)
-        if n > 4096:
-            raise ValueError("body muy grande")
+        if n > 1024 * 1024:
+            raise ValueError("body muy grande (maximo 1 MB)")
         raw = self.rfile.read(n) if n else b""
         return json.loads(raw.decode() or "{}")
 
@@ -481,6 +928,34 @@ class H(BaseHTTPRequestHandler):
                     if not rec:
                         return self.send(404, {"ok": False, "error": "no existe"})
                     return self.send(200, build_json(rec))
+            if path == "/api/v1/info" and method == "GET":
+                return self.send(200, dict(ok=True, **vps_info()))
+            if path == "/api/v1/pin" and method == "GET":
+                q = parse_qs(urlparse(self.path).query)
+                return self.send(200, dict(ok=True, **cert_info((q.get("sni") or [""])[0].strip())))
+            if path == "/api/v1/preview" and method == "POST":
+                b = self.body()
+                done, skipped = render_profiles(sample_account(), [b.get("profile") or {}])
+                if not done:
+                    return self.send(422, {"ok": False, "error": skipped[0]["reason"]})
+                return self.send(200, dict(ok=True, preview=True, **done[0]))
+            if path == "/api/v1/render" and method == "POST":
+                b = self.body()
+                profiles = b.get("profiles") if isinstance(b.get("profiles"), list) else [b.get("profile")]
+                if not profiles or not all(isinstance(p, dict) for p in profiles):
+                    raise ValueError("envia 'profile' (objeto) o 'profiles' (lista de objetos)")
+                if len(profiles) > 200:
+                    raise ValueError("maximo 200 perfiles por peticion")
+                acct = get_or_create_account(b.get("username"), b.get("password"), int(b.get("ip_limit", 1)))
+                done, skipped = render_profiles(acct, profiles)
+                if not done:
+                    return self.send(422, {"ok": False, "error": "ningun perfil pudo generarse", "skipped": skipped})
+                return self.send(200, {"ok": True,
+                                       "account": {"username": acct["username"], "password": acct["password"],
+                                                   "host": acct["host"], "created": acct.get("created", False),
+                                                   "created_at": acct["created_at"], "expires_at": acct["expires_at"],
+                                                   "expires_at_epoch": acct["expires_at_epoch"]},
+                                       "configs": done, "skipped": skipped})
             return self.send(404, {"ok": False, "error": "ruta no encontrada"})
         except FileExistsError as e:
             return self.send(409, {"ok": False, "error": str(e)})
@@ -514,6 +989,17 @@ def main():
         delete_account(sys.argv[2]); print("ok")
     elif cmd == "reap":
         print("vencidas borradas:", reap())
+    elif cmd == "pin":
+        print(json.dumps(cert_info(sys.argv[2] if len(sys.argv) > 2 else ""), indent=1))
+    elif cmd == "preview" and len(sys.argv) > 2:
+        done, skipped = render_profiles(sample_account(), [json.load(open(sys.argv[2], encoding="utf-8"))])
+        print(done[0]["avg"] if done else skipped[0]["reason"])
+    elif cmd == "render" and len(sys.argv) > 3:
+        acct = get_or_create_account(sys.argv[2])
+        done, skipped = render_profiles(acct, [json.load(open(sys.argv[3], encoding="utf-8"))])
+        if not done:
+            sys.exit(skipped[0]["reason"])
+        print(done[0]["link"] if "--link" in sys.argv else done[0]["avg"])
     else:
         print(__doc__)
 

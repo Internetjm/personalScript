@@ -1616,6 +1616,8 @@ function jm_api_menu(){
         printf " ${COLOR1}│${NC} ${WH}[${COLOR1}1${WH}]${NC} ${COLOR1}•${NC} ${WH}VALIDAR API       ${WH}[${COLOR1}4${WH}]${NC} ${COLOR1}•${NC} ${WH}TIEMPO RESTANTE${NC} ${COLOR1}│${NC}\n"
         printf " ${COLOR1}│${NC} ${WH}[${COLOR1}2${WH}]${NC} ${COLOR1}•${NC} ${WH}CREAR/RENOVAR     ${WH}[${COLOR1}5${WH}]${NC} ${COLOR1}•${NC} ${WH}COMANDOS CURL${NC}    ${COLOR1}│${NC}\n"
         printf " ${COLOR1}│${NC} ${WH}[${COLOR1}3${WH}]${NC} ${COLOR1}•${NC} ${WH}CONSULTAR USUARIO  ${WH}[${COLOR1}6${WH}]${NC} ${COLOR1}•${NC} ${WH}INSTALAR/REPARAR${NC} ${COLOR1}│${NC}\n"
+        printf " ${COLOR1}│${NC} ${WH}[${COLOR1}7${WH}]${NC} ${COLOR1}•${NC} ${WH}INFO VPS          ${WH}[${COLOR1}8${WH}]${NC} ${COLOR1}•${NC} ${WH}HUELLA TLS${NC}       ${COLOR1}│${NC}\n"
+        printf " ${COLOR1}│${NC} ${WH}[${COLOR1}9${WH}]${NC} ${COLOR1}•${NC} ${WH}PREVIEW PERFIL     ${WH}[${COLOR1}10${WH}]${NC} ${COLOR1}•${NC} ${WH}RENDER PERFIL${NC}    ${COLOR1}│${NC}\n"
         printf " ${COLOR1}│${NC} ${WH}[${COLOR1}0${WH}]${NC} ${COLOR1}•${NC} ${WH}REGRESAR${NC}                                      ${COLOR1}│${NC}\n"
         echo -e " ${COLOR1}╰═════════════════════════════════════════════════╯${NC}"
         echo -ne " ${WH}Select menu ${COLOR1}:${NC} ${WH}"; read -r choice
@@ -1674,6 +1676,50 @@ function jm_api_menu(){
                 ;;
             6)
                 jm_api_install_or_repair
+                ;;
+            7)
+                response=$(curl -sS --max-time 10 -H "X-API-Key: ${api_key}" "${api_url}/api/v1/info" 2>&1) || true
+                echo "${response}"
+                read -r -n 1 -s -p "Presiona una tecla..."
+                ;;
+            8)
+                response=$(curl -sS --max-time 10 -H "X-API-Key: ${api_key}" "${api_url}/api/v1/pin" 2>&1) || true
+                echo "${response}"
+                read -r -n 1 -s -p "Presiona una tecla..."
+                ;;
+            9)
+                read -r -p "Método (ssh_direct/ssh_ssl/payload_ssl/slowdns/udp/v2ray): " profile_method
+                case "$profile_method" in
+                    ssh_direct|ssh_proxy|ssh_ssl|payload_ssl|slowdns|udp|v2ray) ;;
+                    *) echo "Método inválido"; read -r -n 1 -s -p "Presiona una tecla..."; continue ;;
+                esac
+                response=$(curl -sS --max-time 10 -X POST \
+                    -H "X-API-Key: ${api_key}" -H "Content-Type: application/json" \
+                    -d "{\"profile\":{\"id\":\"panel-preview\",\"name\":\"Panel Preview\",\"country\":\"CO\",\"method\":\"${profile_method}\"}}" \
+                    "${api_url}/api/v1/preview" 2>&1) || true
+                echo "${response}"
+                read -r -n 1 -s -p "Presiona una tecla..."
+                ;;
+            10)
+                read -r -p "Usuario (3-24 caracteres): " render_user
+                read -r -s -p "Contraseña (4-32 caracteres): " render_password
+                echo ""
+                read -r -p "Método (ssh_direct/ssh_ssl/payload_ssl/slowdns/udp/v2ray): " profile_method
+                case "$profile_method" in
+                    ssh_direct|ssh_ssl|payload_ssl|slowdns|udp|v2ray) ;;
+                    *) echo "Método inválido"; read -r -n 1 -s -p "Presiona una tecla..."; continue ;;
+                esac
+                if ! [[ "$render_user" =~ ^[a-zA-Z][a-zA-Z0-9_-]{2,23}$ ]] || ! [[ "$render_password" =~ ^[A-Za-z0-9._-]{4,32}$ ]]; then
+                    echo "Usuario o contraseña inválidos."
+                    read -r -n 1 -s -p "Presiona una tecla..."
+                    continue
+                fi
+                response=$(curl -sS --max-time 15 -X POST \
+                    -H "X-API-Key: ${api_key}" -H "Content-Type: application/json" \
+                    -d "{\"username\":\"${render_user}\",\"password\":\"${render_password}\",\"ip_limit\":1,\"profile\":{\"id\":\"panel-render\",\"name\":\"Panel Render\",\"country\":\"CO\",\"method\":\"${profile_method}\"}}" \
+                    "${api_url}/api/v1/render" 2>&1) || true
+                echo "${response}"
+                read -r -n 1 -s -p "Presiona una tecla..."
                 ;;
             0) menu; return ;;
             *) echo "Opción inválida"; sleep 1 ;;
