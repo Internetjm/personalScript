@@ -362,6 +362,7 @@ def b64(d):
 
 def build_json(rec):
     u, pw, uid = rec["username"], rec["password"], rec.get("uuid", "")
+    xray_active = DRY or svc_active("xray")
     domain = rd("/etc/xray/domain")
     patch = rd("/etc/xray/patch")
     ns, slkey = rd("/etc/xray/dns"), rd("/etc/slowdns/server.pub")
@@ -399,7 +400,7 @@ def build_json(rec):
     proto["bhttp"] = {"installed": svc_exists("bhttp"), "host": domain, "port": int(bp.group(1)) if bp else 8888,
                       "username": u, "password": pw}
 
-    if uid:
+    if uid and xray_active:
         def vm(net, port, tls, path):
             return "vmess://" + b64({"v": "2", "ps": u, "add": domain, "port": str(port), "id": uid, "aid": "0",
                                      "net": net, "path": path, "type": "none", "host": domain, "tls": tls})
@@ -666,6 +667,8 @@ def build_v2ray_json(entry, ctx):
     sni = fill(v2.get("sni", ""), ctx)
     if not ctx["uuid"]:
         raise ValueError("la cuenta no tiene UUID (Xray no esta instalado en el VPS)")
+    if not ctx["p"].get("vmess", {}).get("installed"):
+        raise ValueError("Xray no esta activo en el VPS")
     path = v2.get("path") or "auto"
     if path == "auto":
         path = ctx["p"].get(proto, {}).get("ws_path") or "/"
@@ -862,8 +865,11 @@ def vps_info():
     s = sample_account()
     p = s["protocols"]
     pin = cert_info("")
+    xray_installed = svc_exists("xray")
+    xray_active = DRY or svc_active("xray")
     return {"host": s["host"], "ssh_ports": p["ssh"]["ports"],
-            "xray": bool(p["vmess"].get("installed")), "slowdns": bool(p["slowdns"].get("installed")),
+            "xray": xray_active, "xray_installed": xray_installed, "xray_active": xray_active,
+            "slowdns": bool(p["slowdns"].get("installed")),
             "udp_zivpn": bool(p["udp_zivpn"].get("installed")), "udp_hysteria": bool(p["udp_hysteria"].get("installed")),
             "udp_custom": bool(p["udp_custom"].get("installed")), "cert_pin": pin["pin"],
             "cert_self_signed": pin["self_signed"], "cert_source": pin["source"],
